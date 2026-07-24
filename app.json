@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "אלרואי | פנמ\"צ",
+    "slug": "elroi-panmatz",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "elroipanmatz",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#3c4a28",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3c4a28"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.elroi.panmatz",
+      "infoPlist": {
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.elroi.panmatz",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#3c4a28"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#f0c239"
+        }
+      ]
+    ],
+    "extra": {
+      "supportsRTL": true
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+*.orig.*
+
+# Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# OS / editor
+.DS_Store
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.idea/
+.vscode/
