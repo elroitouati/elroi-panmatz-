@@ -7,7 +7,7 @@ import {
   DEFAULT_PSYCH_WEEKLY_TARGET,
 } from '../data/defaults';
 import { todayKey } from '../utils/date';
-import { bumpedCurrent, reachedFinal, isNewPersonalBest } from '../utils/fitness';
+import { bumpedCurrent, loweredCurrent, atStart, reachedFinal, isNewPersonalBest } from '../utils/fitness';
 import {
   ensurePermissions,
   scheduleDailyTrainingReminders,
@@ -197,6 +197,26 @@ export function AppProvider({ children }) {
     return event;
   };
 
+  // "קשה לי" — הורדת היעד הנוכחי בהדרגה (יציאה ממצב תחזוקה אם צריך)
+  const lowerGoal = (id) => {
+    let event = 'down';
+    setState((s) => {
+      const goals = s.goals.map((g) => {
+        if (g.id !== id) return g;
+        if (atStart(g)) {
+          event = 'min';
+          return g;
+        }
+        event = 'down';
+        return { ...g, current: loweredCurrent(g), maintenance: false };
+      });
+      return { ...s, goals };
+    });
+    if (event === 'down') flash('הורדת רמה — ממשיכים בקצב שנוח לך 👍');
+    else flash('כבר ברמת הבסיס של היעד');
+    return event;
+  };
+
   // סימון ביצוע יעד היום — כולל שמירת ערך נמדד והיסטוריה לגרף
   const markGoalToday = (id, value) => {
     const key = todayKey();
@@ -293,6 +313,7 @@ export function AppProvider({ children }) {
     addGoal,
     deleteGoal,
     bumpGoal,
+    lowerGoal,
     markGoalToday,
     unmarkGoalToday,
     setDayTrained,

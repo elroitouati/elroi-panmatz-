@@ -40,6 +40,21 @@ export function bumpedCurrent(goal) {
   return Math.min(goal.final, goal.current + goal.step);
 }
 
+// חישוב היעד הנוכחי אחרי לחיצת "קשה לי" — יורד בהדרגה, לא מתחת לנקודת הפתיחה
+export function loweredCurrent(goal) {
+  if (goal.lowerIsBetter) {
+    // בריצה זמן גבוה יותר = קל יותר
+    return Math.min(goal.start, goal.current + goal.step);
+  }
+  return Math.max(goal.start, goal.current - goal.step);
+}
+
+// האם היעד כבר ברמת הבסיס (אי אפשר להוריד עוד)
+export function atStart(goal) {
+  if (goal.lowerIsBetter) return goal.current >= goal.start;
+  return goal.current <= goal.start;
+}
+
 // האם יום מסוים (0=ראשון..6=שבת) הוא יום אימון עבור היעד
 export function isTrainingWeekday(goal, weekday) {
   return goal.trainingDays.includes(weekday);

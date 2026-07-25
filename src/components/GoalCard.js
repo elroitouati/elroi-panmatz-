@@ -5,12 +5,13 @@ import Card from './Card';
 import ProgressBar from './ProgressBar';
 import MiniChart from './MiniChart';
 import { colors, radius, spacing, font } from '../theme';
-import { formatValue, unitLabel, goalProgress, reachedFinal } from '../utils/fitness';
+import { formatValue, unitLabel, goalProgress, reachedFinal, atStart } from '../utils/fitness';
 import { HEB_WEEKDAYS_SHORT } from '../utils/date';
 
-export default function GoalCard({ goal, todayDone, onToggleEnabled, onEdit, onBump, onMarkDone, onUnmark }) {
+export default function GoalCard({ goal, todayDone, onToggleEnabled, onEdit, onBump, onLower, onMarkDone, onUnmark }) {
   const measured = goal.tracking === 'measured';
   const done = reachedFinal(goal) || goal.maintenance;
+  const minReached = atStart(goal);
   const daysText = goal.trainingDays.map((d) => HEB_WEEKDAYS_SHORT[d]).join(' · ');
 
   return (
@@ -58,20 +59,34 @@ export default function GoalCard({ goal, todayDone, onToggleEnabled, onEdit, onB
         </View>
       )}
 
-      {/* כפתורי פעולה */}
-      <View style={styles.actions}>
-        {!done ? (
-          <Pressable style={[styles.actionBtn, styles.easyBtn]} onPress={() => onBump(goal.id)}>
-            <Ionicons name="trending-up" size={16} color={colors.gold} />
-            <Text style={styles.easyText}>קל לי — העלה יעד</Text>
+      {/* בקרת רמה — "קשה לי" / "קל לי" — רק לתרגילים נמדדים */}
+      {measured && (
+        <View style={styles.levelRow}>
+          <Pressable
+            style={[styles.actionBtn, styles.hardBtn, minReached && styles.btnDisabled]}
+            onPress={() => onLower(goal.id)}
+            disabled={minReached}
+          >
+            <Ionicons name="trending-down" size={16} color={minReached ? colors.creamDim : colors.cream} />
+            <Text style={[styles.hardText, minReached && { color: colors.creamDim }]}>קשה לי</Text>
           </Pressable>
-        ) : (
-          <View style={[styles.actionBtn, styles.maintBtn]}>
-            <Ionicons name="shield-checkmark" size={16} color={colors.success} />
-            <Text style={styles.maintText}>מצב תחזוקה</Text>
-          </View>
-        )}
 
+          {done ? (
+            <View style={[styles.actionBtn, styles.maintBtn]}>
+              <Ionicons name="shield-checkmark" size={16} color={colors.success} />
+              <Text style={styles.maintText}>תחזוקה</Text>
+            </View>
+          ) : (
+            <Pressable style={[styles.actionBtn, styles.easyBtn]} onPress={() => onBump(goal.id)}>
+              <Ionicons name="trending-up" size={16} color={colors.gold} />
+              <Text style={styles.easyText}>קל לי</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {/* סימון ביצוע */}
+      <View style={styles.actions}>
         {todayDone ? (
           <Pressable style={[styles.actionBtn, styles.doneBtn]} onPress={() => onUnmark(goal.id)}>
             <Ionicons name="checkmark-circle" size={18} color={colors.bg} />
@@ -123,13 +138,17 @@ const styles = StyleSheet.create({
   numLabel: { color: colors.creamDim, fontSize: font.tiny },
   numBig: { color: colors.gold, fontSize: 30, fontWeight: '900', lineHeight: 34 },
   numUnit: { color: colors.creamDim, fontSize: font.tiny },
-  actions: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.lg },
+  levelRow: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.lg },
+  actions: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.sm },
   actionBtn: {
     flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: spacing.md, borderRadius: radius.pill,
   },
   easyBtn: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.goldDim },
   easyText: { color: colors.gold, fontWeight: '700', fontSize: font.small },
+  hardBtn: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.line },
+  hardText: { color: colors.cream, fontWeight: '700', fontSize: font.small },
+  btnDisabled: { opacity: 0.5 },
   maintBtn: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.rest },
   maintText: { color: colors.success, fontWeight: '700', fontSize: font.small },
   markBtn: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.line },

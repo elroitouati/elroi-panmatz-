@@ -11,7 +11,7 @@ import { useApp } from '../context/AppContext';
 import { todayKey } from '../utils/date';
 
 export default function FitnessScreen() {
-  const { state, toggleGoalEnabled, updateGoal, deleteGoal, bumpGoal, markGoalToday, unmarkGoalToday, addGoal } = useApp();
+  const { state, toggleGoalEnabled, updateGoal, deleteGoal, bumpGoal, lowerGoal, markGoalToday, unmarkGoalToday, addGoal } = useApp();
   const [valueGoal, setValueGoal] = useState(null);
   const [editGoal, setEditGoal] = useState(null);
 
@@ -62,6 +62,7 @@ export default function FitnessScreen() {
           onToggleEnabled={toggleGoalEnabled}
           onEdit={setEditGoal}
           onBump={bumpGoal}
+          onLower={lowerGoal}
           onMarkDone={handleMarkDone}
           onUnmark={unmarkGoalToday}
         />
