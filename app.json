@@ -12,7 +12,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#3c4a28"
+      "backgroundColor": "#424c29"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -30,7 +30,7 @@
       "package": "com.elroi.panmatz",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#3c4a28"
+        "backgroundColor": "#424c29"
       }
     },
     "web": {
