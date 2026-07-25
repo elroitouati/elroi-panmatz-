@@ -2,6 +2,7 @@
   "expo": {
     "name": "אלרואי | פנמ\"צ",
     "slug": "elroi-panmatz",
+    "owner": "elroi_touati",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -44,7 +45,10 @@
       ]
     ],
     "extra": {
-      "supportsRTL": true
+      "supportsRTL": true,
+      "eas": {
+        "projectId": "f807a58c-7428-4151-83dc-aeba4303adbf"
+      }
     }
   }
 }
