@@ -3,12 +3,13 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
 import Card from '../components/Card';
+import StatTile from '../components/StatTile';
 import { colors, spacing, radius, font } from '../theme';
 import { useApp } from '../context/AppContext';
 import {
-  buildMonthGrid, keyToDate, dayKey, todayKey, monthLabel, HEB_WEEKDAYS_SHORT,
+  buildMonthGrid, keyToDate, todayKey, monthLabel, HEB_WEEKDAYS_SHORT,
 } from '../utils/date';
-import { classifyDay, anyGoalTrainsOn } from '../utils/fitness';
+import { classifyDay, anyGoalTrainsOn, computeStreak } from '../utils/fitness';
 
 export default function CalendarScreen() {
   const { state, setDayTrained } = useApp();
@@ -58,22 +59,7 @@ export default function CalendarScreen() {
       }
     });
     const adherence = trainingPast === 0 ? 0 : Math.round((trainedPast / trainingPast) * 100);
-
-    // רצף נוכחי — נספר אחורה מהיום, ימי מנוחה לא שוברים
-    let streak = 0;
-    const cursor = new Date();
-    for (let i = 0; i < 400; i++) {
-      const k = dayKey(cursor);
-      const wd = cursor.getDay();
-      const trainingDay = anyGoalTrainsOn(enabledGoals, wd);
-      const trained = state.logs[k]?.trained;
-      if (trainingDay) {
-        if (trained) streak += 1;
-        else if (k === today) { /* היום עוד לא נגמר — לא שובר */ }
-        else break;
-      }
-      cursor.setDate(cursor.getDate() - 1);
-    }
+    const streak = computeStreak(enabledGoals, state.logs);
 
     return { workouts, adherence, streak };
   }, [weeks, state.logs, enabledGoals, today]);
@@ -134,9 +120,9 @@ export default function CalendarScreen() {
 
       {/* סטטיסטיקות מהירות */}
       <View style={styles.statsRow}>
-        <StatBox value={stats.workouts} label="אימונים החודש" icon="barbell-outline" />
-        <StatBox value={stats.streak} label="רצף נוכחי" icon="flame-outline" gold />
-        <StatBox value={`${stats.adherence}%`} label="עמידה ביעד" icon="checkmark-done-outline" />
+        <StatTile value={stats.workouts} label="אימונים החודש" icon="barbell-outline" />
+        <StatTile value={stats.streak} label="רצף נוכחי" icon="flame-outline" emphasis />
+        <StatTile value={`${stats.adherence}%`} label="עמידה ביעד" icon="checkmark-done-outline" />
       </View>
     </Screen>
   );
@@ -161,16 +147,6 @@ function LegendDot({ color, label }) {
   );
 }
 
-function StatBox({ value, label, icon, gold }) {
-  return (
-    <View style={styles.statBox}>
-      <Ionicons name={icon} size={22} color={gold ? colors.gold : colors.creamDim} />
-      <Text style={[styles.statValue, gold && { color: colors.gold }]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   monthNav: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
   monthTitle: { color: colors.cream, fontSize: font.h3, fontWeight: '800' },
@@ -178,7 +154,7 @@ const styles = StyleSheet.create({
   weekHeaderText: { flex: 1, textAlign: 'center', color: colors.creamDim, fontSize: font.tiny, fontWeight: '700' },
   week: { flexDirection: 'row-reverse', marginBottom: 6 },
   cell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  dayBox: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  dayBox: { width: 38, height: 38, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   todayRing: { borderWidth: 2, borderColor: colors.cream },
   dayNum: { fontSize: font.small },
   legend: { flexDirection: 'row-reverse', justifyContent: 'center', gap: spacing.lg, marginTop: spacing.md },
@@ -187,7 +163,4 @@ const styles = StyleSheet.create({
   legendText: { color: colors.creamDim, fontSize: font.tiny },
   hint: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'center', marginTop: spacing.sm },
   statsRow: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.sm },
-  statBox: { flex: 1, backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: spacing.md, alignItems: 'center', gap: 4 },
-  statValue: { color: colors.cream, fontSize: font.h2, fontWeight: '900' },
-  statLabel: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'center' },
 });

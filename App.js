@@ -8,7 +8,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { AppProvider, useApp } from './src/context/AppContext';
-import { colors } from './src/theme';
+import { colors, radius, shadow } from './src/theme';
+import IconBadge from './src/components/IconBadge';
 import HomeScreen from './src/screens/HomeScreen';
 import FitnessScreen from './src/screens/FitnessScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
@@ -53,16 +54,23 @@ function Tabs() {
         tabBarActiveTintColor: colors.gold,
         tabBarInactiveTintColor: colors.creamDim,
         tabBarStyle: {
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: 20,
+          height: 76,
+          borderRadius: radius.xl,
           backgroundColor: colors.bgDeep,
-          borderTopColor: colors.line,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
+          borderTopWidth: 0,
+          borderWidth: 1,
+          borderColor: colors.line,
+          ...shadow.card,
         },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '700' },
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarItemStyle: { paddingVertical: 8 },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700', marginTop: 2 },
+        tabBarIcon: ({ focused, color }) => {
           const [on, off] = TAB_ICONS[route.name] || ['ellipse', 'ellipse-outline'];
-          return <Ionicons name={focused ? on : off} size={size} color={color} />;
+          return <IconBadge icon={focused ? on : off} size={40} iconSize={20} iconColor={color} active={focused} />;
         },
       })}
     >

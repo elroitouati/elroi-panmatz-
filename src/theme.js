@@ -20,9 +20,27 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 10, md: 16, lg: 22, pill: 999,
+  sm: 12, md: 20, lg: 26, xl: 32, pill: 999,
 };
 
 export const font = {
-  h1: 30, h2: 22, h3: 18, body: 16, small: 14, tiny: 12,
+  hero: 44, h1: 30, h2: 24, h3: 18, body: 16, small: 14, tiny: 12,
+};
+
+// עומק (צללים) — לתחושת "כרטיסים צפים" בהשראת ממשקי הפניקס שמצורפים
+export const shadow = {
+  card: {
+    shadowColor: '#000',
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  soft: {
+    shadowColor: '#000',
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
 };

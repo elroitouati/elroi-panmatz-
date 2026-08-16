@@ -4,8 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import Card from './Card';
 import ProgressBar from './ProgressBar';
 import MiniChart from './MiniChart';
+import IconBadge from './IconBadge';
+import StatTile from './StatTile';
 import { colors, radius, spacing, font } from '../theme';
-import { formatValue, unitLabel, goalProgress, reachedFinal, atStart } from '../utils/fitness';
+import { formatValue, unitLabel, goalProgress, reachedFinal, atStart, categoryIcon } from '../utils/fitness';
 import { HEB_WEEKDAYS_SHORT } from '../utils/date';
 
 export default function GoalCard({ goal, todayDone, onToggleEnabled, onEdit, onBump, onLower, onMarkDone, onUnmark }) {
@@ -18,10 +20,8 @@ export default function GoalCard({ goal, todayDone, onToggleEnabled, onEdit, onB
     <Card highlight={goal.emphasis} style={!goal.enabled && styles.disabled}>
       {/* כותרת */}
       <View style={styles.header}>
-        <Pressable onPress={() => onToggleEnabled(goal.id)} hitSlop={8} style={styles.enableBtn}>
-          <View style={[styles.enableBox, goal.enabled && styles.enableBoxOn]}>
-            {goal.enabled && <Ionicons name="checkmark" size={16} color={colors.bg} />}
-          </View>
+        <Pressable onPress={() => onToggleEnabled(goal.id)} hitSlop={8}>
+          <IconBadge icon={categoryIcon(goal.category)} size={44} active={goal.enabled} />
         </Pressable>
 
         <View style={{ flex: 1 }}>
@@ -43,17 +43,17 @@ export default function GoalCard({ goal, todayDone, onToggleEnabled, onEdit, onB
       {measured && (
         <View style={styles.progressBlock}>
           <View style={styles.numbersRow}>
-            <View style={styles.numCol}>
-              <Text style={styles.numLabel}>יעד היום</Text>
-              <Text style={styles.numBig}>{formatValue(goal, goal.current)}</Text>
-              <Text style={styles.numUnit}>{unitLabel(goal)}</Text>
-            </View>
-            <Ionicons name="arrow-back" size={20} color={colors.creamDim} style={{ marginTop: 18 }} />
-            <View style={styles.numCol}>
-              <Text style={styles.numLabel}>יעד סופי</Text>
-              <Text style={[styles.numBig, { color: colors.cream }]}>{formatValue(goal, goal.final)}</Text>
-              <Text style={styles.numUnit}>{unitLabel(goal)}</Text>
-            </View>
+            <StatTile
+              icon={categoryIcon(goal.category)}
+              value={`${formatValue(goal, goal.current)} ${unitLabel(goal)}`}
+              label="יעד היום"
+              emphasis
+            />
+            <StatTile
+              icon="flag-outline"
+              value={`${formatValue(goal, goal.final)} ${unitLabel(goal)}`}
+              label="יעד סופי"
+            />
           </View>
           <ProgressBar progress={goalProgress(goal)} height={8} />
         </View>
@@ -121,23 +121,13 @@ function Tag({ text, bg, fg }) {
 const styles = StyleSheet.create({
   disabled: { opacity: 0.55 },
   header: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
-  enableBtn: { padding: 2 },
-  enableBox: {
-    width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: colors.goldDim,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  enableBoxOn: { backgroundColor: colors.gold, borderColor: colors.gold },
   titleRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   name: { color: colors.cream, fontSize: font.body, fontWeight: '800' },
   days: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'right', marginTop: 3 },
   tag: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 1 },
   tagText: { fontSize: 10, fontWeight: '800' },
   progressBlock: { marginTop: spacing.lg },
-  numbersRow: { flexDirection: 'row-reverse', alignItems: 'flex-start', justifyContent: 'center', gap: spacing.xl, marginBottom: spacing.md },
-  numCol: { alignItems: 'center' },
-  numLabel: { color: colors.creamDim, fontSize: font.tiny },
-  numBig: { color: colors.gold, fontSize: 30, fontWeight: '900', lineHeight: 34 },
-  numUnit: { color: colors.creamDim, fontSize: font.tiny },
+  numbersRow: { flexDirection: 'row-reverse', gap: spacing.sm, marginBottom: spacing.md },
   levelRow: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.lg },
   actions: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.sm },
   actionBtn: {

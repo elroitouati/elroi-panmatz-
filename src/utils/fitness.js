@@ -1,3 +1,5 @@
+import { dayKey, todayKey } from './date';
+
 // לוגיקת יעדים מתקדמים (progressive goals) ומדדים
 
 // עיצוב ערך יעד לתצוגה: זמן ריצה כדקות:שניות, אחרת מספר גולמי
@@ -89,4 +91,33 @@ export function isNewPersonalBest(goal, value) {
   const best = personalBest(goal);
   if (best == null) return true;
   return goal.lowerIsBetter ? value < best : value > best;
+}
+
+// אייקון ייצוגי לפי קטגוריית היעד — לתגי-אייקון עגולים ברחבי האפליקציה
+export function categoryIcon(category) {
+  switch (category) {
+    case 'strength': return 'barbell-outline';
+    case 'run': return 'walk-outline';
+    case 'calisthenics': return 'body-outline';
+    case 'aerobic': return 'heart-outline';
+    default: return 'ellipse-outline';
+  }
+}
+
+// רצף ימי אימון נוכחי — נספר אחורה מהיום, ימים שאינם ימי אימון לא שוברים רצף
+export function computeStreak(goals, logs) {
+  let streak = 0;
+  const today = todayKey();
+  const cursor = new Date();
+  for (let i = 0; i < 400; i++) {
+    const k = dayKey(cursor);
+    const trainingDay = anyGoalTrainsOn(goals, cursor.getDay());
+    const trained = logs[k]?.trained;
+    if (trainingDay) {
+      if (trained) streak += 1;
+      else if (k !== today) break; // היום עוד לא נגמר — לא שובר את הרצף
+    }
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
 }

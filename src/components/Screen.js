@@ -10,7 +10,7 @@ export default function Screen({ title, subtitle, children, scroll = true, heade
   const Container = scroll ? ScrollView : View;
   const containerProps = scroll
     ? {
-        contentContainerStyle: { padding: spacing.lg, paddingBottom: spacing.xxl * 2 },
+        contentContainerStyle: { padding: spacing.lg, paddingBottom: 120 },
         showsVerticalScrollIndicator: false,
       }
     : { style: { flex: 1, padding: spacing.lg } };
@@ -40,6 +40,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   headerText: { flex: 1 },
-  title: { color: colors.cream, fontSize: font.h1, fontWeight: '800', textAlign: 'right' },
+  title: { color: colors.cream, fontSize: font.h1, fontWeight: '900', textAlign: 'right', letterSpacing: -0.5 },
   subtitle: { color: colors.creamDim, fontSize: font.small, textAlign: 'right', marginTop: 2 },
 });

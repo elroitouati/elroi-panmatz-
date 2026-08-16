@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, font } from '../theme';
+import { colors, radius, spacing, font, shadow } from '../theme';
 import { stageStatus } from '../utils/stages';
 
 // מפת המסלול — חמשת השלבים בשורה, עם חיבור ביניהם וסימון השלב הנוכחי.
@@ -58,7 +58,7 @@ export default function StageMap({ stages }) {
   );
 }
 
-const DOT = 40;
+const DOT = 44;
 const styles = StyleSheet.create({
   wrap: {
     flexDirection: 'row-reverse',
@@ -91,9 +91,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     zIndex: 2,
+    ...shadow.soft,
   },
   dotCurrent: {
-    transform: [{ scale: 1.12 }],
+    transform: [{ scale: 1.14 }],
   },
   label: {
     color: colors.creamDim,

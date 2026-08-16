@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   col: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  bar: { width: '100%', borderRadius: 4, minHeight: 12 },
+  bar: { width: '100%', borderRadius: 7, minHeight: 12 },
   legend: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
