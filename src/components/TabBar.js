@@ -72,17 +72,21 @@ export default function TabBar({ state: navState, descriptors, navigation }) {
 }
 
 const styles = StyleSheet.create({
+  // רצועת רקע אטומה מתחת לפס: התוכן נעלם מאחוריה בקו נקי במקום
+  // להציץ סביב הפינות המעוגלות ולהיראות כמו ריבוע שהודבק על המסך.
   wrap: {
     position: 'absolute',
     start: 0,
     end: 0,
     bottom: 0,
     paddingHorizontal: layout.gutter,
-    backgroundColor: 'transparent',
+    paddingTop: space[3],
+    backgroundColor: colors.bg,
   },
+  // משטח בהיר מהרקע — על ערכת נושא כהה "מרחף" נקרא כבהיר יותר, לא כהה יותר.
   bar: {
     flexDirection: 'row',
-    backgroundColor: colors.bgSunken,
+    backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,

@@ -5,29 +5,23 @@ import { colors, radius, layout, state } from '../design/tokens';
 // אריח בנטו. על רקע כהה העומק בא ממשטח ומסגרת 1px — לא מצל.
 // accent=true נותן לאריח יחיד את צבע הדגש; זה מה שהופך רשת לקיר
 // או להיררכיה. אריח דגש אחד לכל רשת, לא יותר.
+//
+// חשוב: האריח הוא אלמנט אחד ויחיד, גם כשהוא לחיץ. עטיפה של View
+// בתוך Pressable הפילה את סגנון הרוחב על הילד הפנימי בזמן שההורה
+// התכווץ לרוחב התוכן — ורשת האריחים קרסה לעמודות של אות אחת.
 export default function Tile({ children, accent = false, onPress, style, accessibilityLabel }) {
-  const body = (
-    <View
-      style={[
-        styles.tile,
-        accent ? styles.accent : styles.plain,
-        style,
-      ]}
-    >
-      {children}
-    </View>
-  );
+  const base = [styles.tile, accent ? styles.accent : styles.plain, style];
 
-  if (!onPress) return body;
+  if (!onPress) return <View style={base}>{children}</View>;
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => pressed && { opacity: state.pressedOpacity }}
+      style={({ pressed }) => [...base, pressed && { opacity: state.pressedOpacity }]}
     >
-      {body}
+      {children}
     </Pressable>
   );
 }

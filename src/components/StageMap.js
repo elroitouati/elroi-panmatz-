@@ -62,7 +62,7 @@ export default function StageMap({ stages }) {
                 isCurrent && styles.labelCurrent,
                 isDone && styles.labelDone,
               ]}
-              numberOfLines={2}
+              numberOfLines={3}
             >
               {stage.name}
             </Text>

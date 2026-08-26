@@ -6,6 +6,7 @@ import Tile from '../components/Tile';
 import StatTile from '../components/StatTile';
 import StageMap from '../components/StageMap';
 import Num from '../components/Num';
+import IconBadge from '../components/IconBadge';
 import ProgressBar from '../components/ProgressBar';
 import EmptyState from '../components/EmptyState';
 import { colors, space, radius, touch } from '../design/tokens';
@@ -100,7 +101,7 @@ export default function HomeScreen({ navigation }) {
           />
         </Tile>
       ) : (
-        <View style={styles.bento}>
+        <View style={styles.goalList}>
           {todaysGoals.map((goal) => {
             const done = !!todayLog?.goals?.[goal.id]?.done;
             const measured = goal.tracking === 'measured';
@@ -108,7 +109,7 @@ export default function HomeScreen({ navigation }) {
               <Tile
                 key={goal.id}
                 accent={goal.id === accentId}
-                style={styles.goalTile}
+                style={styles.goalRow}
                 onPress={() =>
                   done
                     ? unmarkGoalToday(goal.id)
@@ -116,42 +117,38 @@ export default function HomeScreen({ navigation }) {
                 }
                 accessibilityLabel={`${goal.name}${done ? ', בוצע' : ', לא בוצע'}`}
               >
-                <View style={styles.goalHead}>
-                  <Ionicons
-                    name={categoryIcon(goal.category)}
-                    size={16}
-                    color={goal.id === accentId ? colors.accent : colors.text3}
+                <View style={styles.goalTop}>
+                  <IconBadge
+                    icon={categoryIcon(goal.category)}
+                    size={touch.min}
+                    active={done}
                   />
+                  <Text style={[text.bodyStrong, styles.goalName]} numberOfLines={1}>
+                    {goal.name}
+                  </Text>
                   <Ionicons
                     name={done ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={18}
+                    size={22}
                     color={done ? colors.accent : colors.text3}
                   />
                 </View>
 
-                <Text style={[text.label, styles.goalName]} numberOfLines={2}>
-                  {goal.name}
-                </Text>
-
                 {measured ? (
-                  <Num
-                    value={formatValue(goal, goal.current)}
-                    unit={unitLabel(goal)}
-                    size="statSm"
-                    color={done ? colors.text2 : colors.text1}
-                  />
-                ) : (
-                  <Text style={[text.bodyStrong, styles.checkOnly]}>
-                    {done ? 'בוצע' : 'לתרגול'}
-                  </Text>
-                )}
-
-                {measured ? (
-                  <ProgressBar
-                    progress={goalProgress(goal)}
-                    label={`התקדמות ב${goal.name}`}
-                    height={4}
-                  />
+                  <View style={styles.goalBottom}>
+                    <View style={styles.goalBar}>
+                      <ProgressBar
+                        progress={goalProgress(goal)}
+                        label={`התקדמות ב${goal.name}`}
+                        height={4}
+                      />
+                    </View>
+                    <Num
+                      value={formatValue(goal, goal.current)}
+                      unit={unitLabel(goal)}
+                      size="statSm"
+                      color={done ? colors.text2 : colors.text1}
+                    />
+                  </View>
                 ) : null}
               </Tile>
             );
@@ -209,10 +206,15 @@ const styles = StyleSheet.create({
   },
   link: { color: colors.accent },
 
-  // רשת בנטו: שני אריחים בשורה במובייל, מרווח זהה בכל מקום.
-  bento: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
-  goalTile: { width: '48.3%', minHeight: 132, justifyContent: 'space-between', gap: space[2] },
-  goalHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  goalName: { color: colors.text2 },
-  checkOnly: { color: colors.text1 },
+  // רשת בנטו לאריחי המדדים: תווית קצרה ומספר, שני אריחים בשורה.
+  bento: { flexDirection: 'row', gap: space[3] },
+
+  // יעדי היום הם רשימה ולא בנטו: שם יעד בעברית לא נכנס לחצי רוחב
+  // בלי להיחתך, וקריאוּת השם חשובה כאן יותר מסימטריית הרשת.
+  goalList: { gap: space[3] },
+  goalRow: { gap: space[3] },
+  goalTop: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  goalName: { flex: 1 },
+  goalBottom: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  goalBar: { flex: 1 },
 });

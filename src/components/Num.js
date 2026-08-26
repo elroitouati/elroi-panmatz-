@@ -25,7 +25,10 @@ export default function Num({
 
   return (
     <View style={[styles.row, style]}>
-      <Text style={[preset, color && { color }]} allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit>
+      {/* בלי adjustsFontSizeToFit: בשילוב עם lineHeight קבוע אנדרואיד
+          מרנדר את הספרות חתוכות ועם קו לרוחבן. במקום זה המספר נשאר
+          בגודלו והמיכל מקבל מספיק מקום. */}
+      <Text style={[preset, color && { color }]} allowFontScaling={false} numberOfLines={1}>
         {ltr(value)}
       </Text>
       {unit ? (

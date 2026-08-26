@@ -76,7 +76,7 @@ export default function PsychScreen() {
           >
             <IconBadge icon="school-outline" size={touch.min} />
             <View style={styles.linkText}>
-              <Text style={text.bodyStrong} numberOfLines={1}>{link.title}</Text>
+              <Text style={text.bodyStrong} numberOfLines={2}>{link.title}</Text>
               <Text style={text.label} numberOfLines={1}>{link.subtitle}</Text>
             </View>
             <Ionicons name="open-outline" size={18} color={colors.text3} />
