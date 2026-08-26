@@ -1,122 +1,106 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
-import { colors, radius, spacing, font } from '../theme';
+import { View, Text, StyleSheet } from 'react-native';
+import Sheet from './Sheet';
+import Input from './Input';
+import Button from './Button';
+import { space, colors } from '../design/tokens';
+import { text } from '../design/typography';
 
-// הזנת ערך אמיתי שבוצע: חזרות (מספר) או זמן ריצה (דקות:שניות).
+// הזנת התוצאה שבוצעה בפועל. שדה זמן מפוצל לשתי תיבות (דקות · שניות),
+// כי צורת השדה מלמדת את הפורמט לפני שנעשית טעות.
 export default function ValueEntryModal({ visible, goal, onClose, onSubmit }) {
   const isTime = goal?.unit === 'זמן';
   const [reps, setReps] = useState('');
   const [min, setMin] = useState('');
   const [sec, setSec] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (visible && goal) {
-      if (isTime) {
-        setMin(String(Math.floor(goal.current / 60)));
-        setSec(String(goal.current % 60).padStart(2, '0'));
-      } else {
-        setReps(String(goal.current));
-      }
+    if (!visible || !goal) return;
+    setError(null);
+    if (isTime) {
+      setMin(String(Math.floor(goal.current / 60)));
+      setSec(String(goal.current % 60).padStart(2, '0'));
+    } else {
+      setReps(String(goal.current));
     }
   }, [visible, goal]);
 
   if (!goal) return null;
 
   const submit = () => {
-    let value;
     if (isTime) {
-      const m = parseInt(min, 10) || 0;
-      const s = parseInt(sec, 10) || 0;
-      value = m * 60 + s;
+      const m = parseInt(min, 10);
+      const s = parseInt(sec, 10);
+      if (isNaN(m) || isNaN(s) || s > 59) {
+        setError('הזן דקות ושניות, כששניות הן בין 0 ל-59.');
+        return;
+      }
+      onSubmit(Math.max(0, m * 60 + s));
     } else {
-      value = parseInt(reps, 10);
-      if (isNaN(value)) value = goal.current;
+      const v = parseInt(reps, 10);
+      if (isNaN(v) || v < 0) {
+        setError('הזן מספר חזרות — מספר שלם מ-0 ומעלה.');
+        return;
+      }
+      onSubmit(v);
     }
-    onSubmit(Math.max(0, value));
   };
 
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.card} onPress={() => {}}>
-          <Text style={styles.title}>{goal.name}</Text>
-          <Text style={styles.sub}>מה התוצאה שביצעת היום?</Text>
+    <Sheet visible={visible} onClose={onClose}>
+      <Text style={text.title}>{goal.name}</Text>
+      <Text style={[text.bodyDim, styles.sub]}>מה התוצאה שביצעת היום?</Text>
 
-          {isTime ? (
-            <View style={styles.timeRow}>
-              <View style={styles.timeField}>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  value={sec}
-                  onChangeText={setSec}
-                  maxLength={2}
-                  placeholder="00"
-                  placeholderTextColor={colors.creamDim}
-                />
-                <Text style={styles.timeLabel}>שניות</Text>
-              </View>
-              <Text style={styles.colon}>:</Text>
-              <View style={styles.timeField}>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  value={min}
-                  onChangeText={setMin}
-                  maxLength={2}
-                  placeholder="0"
-                  placeholderTextColor={colors.creamDim}
-                />
-                <Text style={styles.timeLabel}>דקות</Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.repsWrap}>
-              <TextInput
-                style={styles.input}
-                keyboardType="number-pad"
-                value={reps}
-                onChangeText={setReps}
-                maxLength={4}
-                placeholder="0"
-                placeholderTextColor={colors.creamDim}
-              />
-              <Text style={styles.timeLabel}>{goal.unit || 'חזרות'}</Text>
-            </View>
-          )}
+      {isTime ? (
+        <View style={styles.timeRow}>
+          <Input
+            label="דקות"
+            value={min}
+            onChangeText={(v) => { setMin(v); setError(null); }}
+            keyboardType="number-pad"
+            maxLength={2}
+            placeholder="8"
+            numeric
+            style={styles.timeField}
+          />
+          <Input
+            label="שניות"
+            value={sec}
+            onChangeText={(v) => { setSec(v); setError(null); }}
+            keyboardType="number-pad"
+            maxLength={2}
+            placeholder="30"
+            numeric
+            style={styles.timeField}
+          />
+        </View>
+      ) : (
+        <Input
+          label={goal.unit || 'חזרות'}
+          value={reps}
+          onChangeText={(v) => { setReps(v); setError(null); }}
+          keyboardType="number-pad"
+          maxLength={4}
+          placeholder="12"
+          numeric
+        />
+      )}
 
-          <View style={styles.actions}>
-            <Pressable style={[styles.btn, styles.btnGhost]} onPress={onClose}>
-              <Text style={styles.btnGhostText}>ביטול</Text>
-            </Pressable>
-            <Pressable style={[styles.btn, styles.btnGold]} onPress={submit}>
-              <Text style={styles.btnGoldText}>שמירה</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      {error ? <Text style={[text.label, styles.error]}>{error}</Text> : null}
+
+      <View style={styles.actions}>
+        <Button label="ביטול" variant="tertiary" onPress={onClose} />
+        <Button label="שמירת התוצאה" variant="primary" onPress={submit} />
+      </View>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.xl, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: colors.line },
-  title: { color: colors.cream, fontSize: font.h3, fontWeight: '800', textAlign: 'center' },
-  sub: { color: colors.creamDim, fontSize: font.small, textAlign: 'center', marginTop: 4, marginBottom: spacing.lg },
-  timeRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  timeField: { alignItems: 'center' },
-  colon: { color: colors.cream, fontSize: 34, fontWeight: '800', marginBottom: 18 },
-  repsWrap: { alignItems: 'center' },
-  input: {
-    backgroundColor: colors.bgDeep, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.line,
-    color: colors.gold, fontSize: 34, fontWeight: '900', textAlign: 'center', width: 96, paddingVertical: spacing.sm,
-  },
-  timeLabel: { color: colors.creamDim, fontSize: font.tiny, marginTop: 4 },
-  actions: { flexDirection: 'row-reverse', gap: spacing.md, marginTop: spacing.xl },
-  btn: { flex: 1, paddingVertical: spacing.md, borderRadius: radius.pill, alignItems: 'center' },
-  btnGhost: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.line },
-  btnGhostText: { color: colors.creamDim, fontWeight: '700' },
-  btnGold: { backgroundColor: colors.gold },
-  btnGoldText: { color: colors.bg, fontWeight: '800' },
+  sub: { marginTop: space[1], marginBottom: space[5] },
+  timeRow: { flexDirection: 'row', gap: space[3] },
+  timeField: { flex: 1 },
+  error: { color: colors.danger, marginTop: space[2] },
+  actions: { flexDirection: 'row', gap: space[3], marginTop: space[6] },
 });

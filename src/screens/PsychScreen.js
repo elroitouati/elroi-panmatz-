@@ -2,10 +2,13 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
-import Card from '../components/Card';
+import Tile from '../components/Tile';
+import Num from '../components/Num';
+import Button from '../components/Button';
 import ProgressBar from '../components/ProgressBar';
 import IconBadge from '../components/IconBadge';
-import { colors, spacing, radius, font } from '../theme';
+import { colors, space, radius, touch, state as st } from '../design/tokens';
+import { text } from '../design/typography';
 import { useApp } from '../context/AppContext';
 import { todayKey, isInThisWeek } from '../utils/date';
 
@@ -13,93 +16,114 @@ export default function PsychScreen() {
   const { state, markPsychToday, unmarkPsychToday, setPsychWeeklyTarget } = useApp();
   if (!state) return null;
 
-  const today = todayKey();
-  const doneToday = state.psych.practiceDays.includes(today);
+  const doneToday = state.psych.practiceDays.includes(todayKey());
   const weekCount = state.psych.practiceDays.filter(isInThisWeek).length;
   const target = state.psych.weeklyTarget;
-  const progress = target === 0 ? 0 : weekCount / target;
 
-  const openLink = (url) => {
-    Linking.openURL(url).catch(() => {});
-  };
+  const openLink = (url) => Linking.openURL(url).catch(() => {});
 
   return (
-    <Screen title="פסיכוטכני" subtitle="הכנה קוגניטיבית — תרגול חיצוני">
-      {/* יעד שבועי */}
-      <Card highlight>
-        <View style={styles.weekHeader}>
-          <Text style={styles.weekTitle}>יעד שבועי</Text>
-          <View style={styles.targetAdjust}>
-            <Pressable onPress={() => setPsychWeeklyTarget(target - 1)} hitSlop={8}>
-              <IconBadge icon="remove" size={30} iconSize={16} active />
-            </Pressable>
-            <Text style={styles.targetNum}>{target}</Text>
-            <Pressable onPress={() => setPsychWeeklyTarget(target + 1)} hitSlop={8}>
-              <IconBadge icon="add" size={30} iconSize={16} active />
-            </Pressable>
+    <Screen title="פסיכוטכני" subtitle="הכנה קוגניטיבית">
+      {/* יעד שבועי — המספר הוא הגיבור, התווית מעליו */}
+      <Tile accent style={styles.hero}>
+        <View style={styles.headRow}>
+          <Text style={text.label}>תרגולים השבוע</Text>
+          <View style={styles.stepper}>
+            <Step
+              icon="remove"
+              label="הפחתת היעד השבועי"
+              onPress={() => setPsychWeeklyTarget(target - 1)}
+              disabled={target <= 1}
+            />
+            <Text style={[text.labelStrong, styles.targetNum]}>{target}</Text>
+            <Step
+              icon="add"
+              label="הגדלת היעד השבועי"
+              onPress={() => setPsychWeeklyTarget(target + 1)}
+            />
           </View>
         </View>
-        <Text style={styles.weekCount}>
-          <Text style={styles.weekCountBig}>{weekCount}</Text> מתוך {target} תרגולים השבוע
-        </Text>
-        <ProgressBar progress={progress} height={10} />
 
-        <Pressable
-          style={[styles.markBtn, doneToday && styles.markBtnDone]}
+        <Num value={weekCount} unit={`מתוך ${target}`} size="stat" style={styles.num} />
+
+        <ProgressBar
+          progress={target === 0 ? 0 : weekCount / target}
+          label="התקדמות שבועית בתרגול"
+          height={8}
+        />
+
+        <Button
+          label={doneToday ? 'תרגלת היום' : 'תרגלתי היום'}
+          icon={doneToday ? 'checkmark' : undefined}
+          variant={doneToday ? 'secondary' : 'primary'}
           onPress={() => (doneToday ? unmarkPsychToday() : markPsychToday())}
-        >
-          <Ionicons
-            name={doneToday ? 'checkmark-circle' : 'add-circle-outline'}
-            size={22}
-            color={doneToday ? colors.bg : colors.bg}
-          />
-          <Text style={styles.markText}>{doneToday ? 'תרגלת היום — כל הכבוד!' : 'תרגלתי היום'}</Text>
-        </Pressable>
-      </Card>
+          style={styles.cta}
+        />
+      </Tile>
 
-      {/* קישורי תרגול חיצוניים */}
-      <Text style={styles.sectionTitle}>אתרי תרגול מומלצים</Text>
-      <Text style={styles.sectionSub}>
-        תרגול ברמה קוגניטיבית גבוהה: סדרות, צורות, לוגיקה וזריזות. הקישורים נפתחים באתר החיצוני.
+      <Text style={[text.bodyStrong, styles.sectionTitle]}>אתרי תרגול</Text>
+      <Text style={text.label}>
+        סדרות, צורות, לוגיקה וזריזות. הקישורים נפתחים בדפדפן.
       </Text>
 
-      {state.psych.links.map((link) => (
-        <Pressable key={link.id} onPress={() => openLink(link.url)}>
-          <Card style={styles.linkCard}>
-            <IconBadge icon="school-outline" size={44} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.linkTitle}>{link.title}</Text>
-              <Text style={styles.linkSub}>{link.subtitle}</Text>
+      <View style={styles.list}>
+        {state.psych.links.map((link) => (
+          <Tile
+            key={link.id}
+            onPress={() => openLink(link.url)}
+            accessibilityLabel={`${link.title} — נפתח בדפדפן`}
+            style={styles.linkTile}
+          >
+            <IconBadge icon="school-outline" size={touch.min} />
+            <View style={styles.linkText}>
+              <Text style={text.bodyStrong} numberOfLines={1}>{link.title}</Text>
+              <Text style={text.label} numberOfLines={1}>{link.subtitle}</Text>
             </View>
-            <IconBadge icon="open-outline" size={36} iconSize={16} bgTint={colors.bgDeep} iconColor={colors.creamDim} />
-          </Card>
-        </Pressable>
-      ))}
-
-      <Text style={styles.footnote}>
-        טיפ: קבע לעצמך שעה קבועה לתרגול, וסמן "תרגלתי היום" מיד בסיום כדי לשמור על רצף.
-      </Text>
+            <Ionicons name="open-outline" size={18} color={colors.text3} />
+          </Tile>
+        ))}
+      </View>
     </Screen>
   );
 }
 
+function Step({ icon, label, onPress, disabled }) {
+  return (
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
+      hitSlop={8}
+      style={({ pressed }) => [
+        styles.step,
+        pressed && !disabled && styles.stepPressed,
+        disabled && { opacity: st.disabledOpacity },
+      ]}
+    >
+      <Ionicons name={icon} size={16} color={colors.text1} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  weekHeader: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' },
-  weekTitle: { color: colors.cream, fontSize: font.h3, fontWeight: '800' },
-  targetAdjust: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
-  targetNum: { color: colors.cream, fontSize: font.h3, fontWeight: '900', minWidth: 26, textAlign: 'center' },
-  weekCount: { color: colors.creamDim, fontSize: font.small, textAlign: 'right', marginTop: spacing.md, marginBottom: spacing.sm },
-  weekCountBig: { color: colors.gold, fontSize: font.h3, fontWeight: '900' },
-  markBtn: {
-    flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.gold, borderRadius: radius.pill, paddingVertical: spacing.md, marginTop: spacing.lg,
+  hero: { gap: space[4] },
+  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  step: {
+    width: 32, height: 32, borderRadius: radius.sm,
+    backgroundColor: colors.surface1,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
   },
-  markBtnDone: { backgroundColor: colors.success },
-  markText: { color: colors.bg, fontWeight: '800', fontSize: font.body },
-  sectionTitle: { color: colors.cream, fontSize: font.h3, fontWeight: '700', marginTop: spacing.lg, textAlign: 'right' },
-  sectionSub: { color: colors.creamDim, fontSize: font.small, textAlign: 'right', marginBottom: spacing.md, marginTop: 4, lineHeight: 20 },
-  linkCard: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
-  linkTitle: { color: colors.cream, fontSize: font.body, fontWeight: '700', textAlign: 'right' },
-  linkSub: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'right', marginTop: 2 },
-  footnote: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'center', marginTop: spacing.lg, lineHeight: 18 },
+  stepPressed: { backgroundColor: colors.surface3 },
+  targetNum: { minWidth: 20, textAlign: 'center' },
+  num: { justifyContent: 'flex-start' },
+  cta: { marginTop: space[1] },
+
+  sectionTitle: { marginTop: space[4] },
+  list: { gap: space[3] },
+  linkTile: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  linkText: { flex: 1, gap: 2 },
 });

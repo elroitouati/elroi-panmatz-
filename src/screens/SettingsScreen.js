@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
-import Card from '../components/Card';
-import DateEntryModal from '../components/DateEntryModal';
+import Tile from '../components/Tile';
 import IconBadge from '../components/IconBadge';
-import { colors, spacing, radius, font } from '../theme';
+import DateEntryModal from '../components/DateEntryModal';
+import { colors, space, radius, touch, state as st } from '../design/tokens';
+import { text } from '../design/typography';
+import { ltr } from '../design/rtl';
 import { useApp } from '../context/AppContext';
 import { formatHebDate } from '../utils/date';
 
@@ -16,12 +18,6 @@ export default function SettingsScreen({ navigation }) {
   if (!state) return null;
   const { settings } = state;
 
-  const back = (
-    <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
-      <Ionicons name="chevron-forward" size={28} color={colors.cream} />
-    </Pressable>
-  );
-
   const changeHour = (delta) => {
     let h = settings.reminderHour + delta;
     if (h < 0) h = 23;
@@ -29,66 +25,79 @@ export default function SettingsScreen({ navigation }) {
     updateSettings({ reminderHour: h });
   };
 
+  // חזרה בעברית מצביעה ימינה — לכיוון תחילת הקריאה
+  const back = (
+    <Pressable
+      onPress={() => navigation.goBack()}
+      accessibilityRole="button"
+      accessibilityLabel="חזרה"
+      hitSlop={12}
+      style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+    >
+      <Ionicons name="chevron-forward" size={20} color={colors.text1} />
+    </Pressable>
+  );
+
   return (
-    <Screen title="הגדרות" subtitle="תאריכי השלבים והתראות" headerRight={back}>
-      {/* תאריכי השלבים */}
-      <Text style={styles.sectionTitle}>תאריכי השלבים</Text>
-      <Text style={styles.sectionSub}>
-        עדכן תאריך אמיתי ברגע שהוא נודע (למשל אחרי הרשמה רשמית). ברגע שתאריך הוזן, מסך הבית עובר לספירת ימים מדויקת.
+    <Screen title="הגדרות" subtitle="תאריכים והתראות" action={back}>
+      <Text style={[text.bodyStrong, styles.sectionTitle]}>תאריכי השלבים</Text>
+      <Text style={text.label}>
+        עד שיוזן תאריך אמיתי, מסך הבית מציג את החודש המשוער בלבד — בלי ספירת ימים.
       </Text>
 
-      {state.stages.map((stage) => (
-        <Pressable key={stage.id} onPress={() => setEditStage(stage)}>
-          <Card style={styles.stageRow}>
-            <IconBadge icon={stage.icon} size={44} active={!!stage.date} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.stageName}>{stage.name}</Text>
-              <Text style={[styles.stageDate, stage.date && styles.stageDateSet]}>
-                {stage.date ? formatHebDate(stage.date) : `${stage.defaultLabel} (משוער)`}
+      <View style={styles.list}>
+        {state.stages.map((stage) => (
+          <Tile
+            key={stage.id}
+            onPress={() => setEditStage(stage)}
+            accessibilityLabel={`עריכת תאריך ל${stage.name}`}
+            style={styles.row}
+          >
+            <IconBadge icon={stage.icon} size={touch.min} active={!!stage.date} />
+            <View style={styles.rowText}>
+              <Text style={text.bodyStrong} numberOfLines={1}>{stage.name}</Text>
+              <Text style={[text.label, stage.date && styles.dateSet]} numberOfLines={1}>
+                {stage.date ? ltr(formatHebDate(stage.date)) : `${stage.defaultLabel} · משוער`}
               </Text>
             </View>
-            <IconBadge icon="create-outline" size={36} iconSize={16} bgTint={colors.bgDeep} iconColor={colors.creamDim} />
-          </Card>
-        </Pressable>
-      ))}
+            <Ionicons name="create-outline" size={18} color={colors.text3} />
+          </Tile>
+        ))}
+      </View>
 
-      {/* התראות */}
-      <Text style={styles.sectionTitle}>התראות</Text>
-      <Card>
-        <View style={styles.switchRow}>
-          <IconBadge icon="notifications-outline" size={44} active={settings.notificationsEnabled} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.switchTitle}>תזכורות אימון</Text>
-            <Text style={styles.switchSub}>תזכורת בימי האימון אם עדיין לא סימנת אימון</Text>
+      <Text style={[text.bodyStrong, styles.sectionTitle]}>התראות</Text>
+      <Tile style={styles.notifTile}>
+        <View style={styles.row}>
+          <IconBadge icon="notifications-outline" size={touch.min} active={settings.notificationsEnabled} />
+          <View style={styles.rowText}>
+            <Text style={text.bodyStrong}>תזכורת אימון</Text>
+            <Text style={text.label}>נשלחת בימי האימון שהגדרת</Text>
           </View>
           <Switch
             value={settings.notificationsEnabled}
             onValueChange={(v) => updateSettings({ notificationsEnabled: v })}
-            trackColor={{ true: colors.goldDim, false: colors.line }}
-            thumbColor={settings.notificationsEnabled ? colors.gold : colors.creamDim}
+            trackColor={{ true: colors.accentBorder, false: colors.surface3 }}
+            thumbColor={settings.notificationsEnabled ? colors.accent : colors.text3}
+            accessibilityLabel="תזכורת אימון"
           />
         </View>
 
-        {settings.notificationsEnabled && (
+        {settings.notificationsEnabled ? (
           <View style={styles.hourRow}>
-            <Text style={styles.hourLabel}>שעת התזכורת</Text>
-            <View style={styles.hourAdjust}>
-              <Pressable onPress={() => changeHour(-1)} hitSlop={8}>
-                <IconBadge icon="remove" size={30} iconSize={16} active />
-              </Pressable>
-              <Text style={styles.hourValue}>
-                {String(settings.reminderHour).padStart(2, '0')}:00
+            <Text style={text.label}>שעת התזכורת</Text>
+            <View style={styles.stepper}>
+              <Step icon="remove" label="שעה מוקדמת יותר" onPress={() => changeHour(-1)} />
+              <Text style={[text.bodyStrong, styles.hour]}>
+                {ltr(`${String(settings.reminderHour).padStart(2, '0')}:00`)}
               </Text>
-              <Pressable onPress={() => changeHour(1)} hitSlop={8}>
-                <IconBadge icon="add" size={30} iconSize={16} active />
-              </Pressable>
+              <Step icon="add" label="שעה מאוחרת יותר" onPress={() => changeHour(1)} />
             </View>
           </View>
-        )}
-      </Card>
+        ) : null}
+      </Tile>
 
-      <Text style={styles.footnote}>
-        כל הנתונים נשמרים מקומית על המכשיר שלך בלבד — בלי חשבון ובלי שרת.
+      <Text style={[text.label, styles.footnote]}>
+        הנתונים נשמרים על המכשיר הזה בלבד. אין חשבון ואין שרת.
       </Text>
 
       <DateEntryModal
@@ -102,19 +111,42 @@ export default function SettingsScreen({ navigation }) {
   );
 }
 
+function Step({ icon, label, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={8}
+      style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+    >
+      <Ionicons name={icon} size={16} color={colors.text1} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  sectionTitle: { color: colors.cream, fontSize: font.h3, fontWeight: '700', marginTop: spacing.md, textAlign: 'right' },
-  sectionSub: { color: colors.creamDim, fontSize: font.small, textAlign: 'right', marginTop: 4, marginBottom: spacing.md, lineHeight: 20 },
-  stageRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
-  stageName: { color: colors.cream, fontSize: font.body, fontWeight: '700', textAlign: 'right' },
-  stageDate: { color: colors.creamDim, fontSize: font.small, textAlign: 'right', marginTop: 2 },
-  stageDateSet: { color: colors.gold, fontWeight: '700' },
-  switchRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
-  switchTitle: { color: colors.cream, fontSize: font.body, fontWeight: '700', textAlign: 'right' },
-  switchSub: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'right', marginTop: 2 },
-  hourRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.line },
-  hourLabel: { color: colors.cream, fontSize: font.body, fontWeight: '600' },
-  hourAdjust: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
-  hourValue: { color: colors.gold, fontSize: font.h3, fontWeight: '900', minWidth: 58, textAlign: 'center' },
-  footnote: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'center', marginTop: spacing.xl, lineHeight: 18 },
+  iconBtn: {
+    width: touch.min, height: touch.min, borderRadius: radius.pill,
+    backgroundColor: colors.surface1, alignItems: 'center', justifyContent: 'center',
+  },
+  pressed: { backgroundColor: colors.surface3 },
+  sectionTitle: { marginTop: space[4] },
+  list: { gap: space[3] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  rowText: { flex: 1, gap: 2 },
+  dateSet: { color: colors.accent },
+  notifTile: { gap: space[4] },
+  hourRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space[4],
+  },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  step: {
+    width: 32, height: 32, borderRadius: radius.sm,
+    backgroundColor: colors.surface1, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  hour: { minWidth: 56, textAlign: 'center' },
+  footnote: { textAlign: 'center', marginTop: space[4] },
 });

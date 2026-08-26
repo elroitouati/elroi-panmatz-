@@ -45,8 +45,8 @@ export async function scheduleDailyTrainingReminders(weekdays, hour = 18, minute
       const id = await Notifications.scheduleNotificationAsync({
         identifier: `train-${wd}`,
         content: {
-          title: 'אלרואי — זמן להתאמן 💪',
-          body: 'עוד יום קרוב לפנמ"צ. סמן את האימון של היום כשתסיים.',
+          title: 'זמן להתאמן',
+          body: 'סמן את האימון של היום כשתסיים.',
           color: '#f0c239',
         },
         trigger: {

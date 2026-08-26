@@ -1,153 +1,158 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, Pressable, ScrollView, StyleSheet, Switch } from 'react-native';
-import { colors, radius, spacing, font } from '../theme';
+import { View, Text, ScrollView, Switch, StyleSheet } from 'react-native';
+import Sheet from './Sheet';
+import Input from './Input';
+import Button from './Button';
 import DayPicker from './DayPicker';
+import { space, colors } from '../design/tokens';
+import { text } from '../design/typography';
 
-// עריכה מלאה של יעד: שם, יעד סופי, קצב עלייה, ימי אימון, סוג מדידה, מחיקה.
+// עריכת יעד. שדה יחיד בכל שורה, תווית מעל, ו-placeholder שמדגים פורמט.
 export default function EditGoalModal({ visible, goal, onClose, onSave, onDelete }) {
   const [name, setName] = useState('');
   const [finalVal, setFinalVal] = useState('');
   const [step, setStep] = useState('');
   const [days, setDays] = useState([]);
   const [measured, setMeasured] = useState(true);
+  const [error, setError] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isTime = goal?.unit === 'זמן';
 
   useEffect(() => {
-    if (visible && goal) {
-      setName(goal.name);
-      setStep(String(goal.step));
-      setDays([...goal.trainingDays]);
-      setMeasured(goal.tracking === 'measured');
-      if (isTime) {
-        setFinalVal(`${Math.floor(goal.final / 60)}:${String(goal.final % 60).padStart(2, '0')}`);
-      } else {
-        setFinalVal(String(goal.final));
-      }
-    }
+    if (!visible || !goal) return;
+    setError(null);
+    setConfirmDelete(false);
+    setName(goal.name);
+    setStep(String(goal.step));
+    setDays([...goal.trainingDays]);
+    setMeasured(goal.tracking === 'measured');
+    setFinalVal(
+      isTime
+        ? `${Math.floor(goal.final / 60)}:${String(goal.final % 60).padStart(2, '0')}`
+        : String(goal.final)
+    );
   }, [visible, goal]);
 
   if (!goal) return null;
 
   const parseFinal = () => {
-    if (isTime) {
-      const parts = finalVal.split(':');
-      const m = parseInt(parts[0], 10) || 0;
-      const s = parseInt(parts[1], 10) || 0;
-      return m * 60 + s;
+    if (!isTime) {
+      const n = parseInt(finalVal, 10);
+      return isNaN(n) ? null : n;
     }
-    const n = parseInt(finalVal, 10);
-    return isNaN(n) ? goal.final : n;
+    const [mm, ss] = finalVal.split(':');
+    const m = parseInt(mm, 10);
+    const s = parseInt(ss ?? '0', 10);
+    if (isNaN(m) || isNaN(s) || s > 59) return null;
+    return m * 60 + s;
   };
 
   const save = () => {
+    if (!name.trim()) { setError('ליעד צריך שם.'); return; }
+    const fin = parseFinal();
+    if (fin === null) {
+      setError(isTime ? 'היעד הסופי צריך להיראות כך: 8:00' : 'היעד הסופי צריך להיות מספר.');
+      return;
+    }
+    if (!days.length) { setError('בחר לפחות יום אימון אחד.'); return; }
+
     onSave({
-      name: name.trim() || goal.name,
-      final: parseFinal(),
+      name: name.trim(),
+      final: fin,
       step: Math.max(1, parseInt(step, 10) || goal.step),
-      trainingDays: days.length ? [...days].sort((a, b) => a - b) : goal.trainingDays,
+      trainingDays: [...days].sort((a, b) => a - b),
       tracking: measured ? 'measured' : 'check',
     });
     onClose();
   };
 
   return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.title}>עריכת יעד</Text>
+    <Sheet visible={visible} onClose={onClose} variant="bottom">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
+        <Text style={text.title}>עריכת יעד</Text>
 
-            <Text style={styles.label}>שם היעד</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="למשל: מתח"
-              placeholderTextColor={colors.creamDim}
-            />
+        <Input
+          label="שם היעד"
+          value={name}
+          onChangeText={(v) => { setName(v); setError(null); }}
+          placeholder="מתח"
+        />
 
-            <Text style={styles.label}>
-              יעד סופי {isTime ? '(דקות:שניות)' : `(${goal.unit || 'חזרות'})`}
+        <Input
+          label={`יעד סופי${isTime ? ' (דקות:שניות)' : ` (${goal.unit || 'חזרות'})`}`}
+          value={finalVal}
+          onChangeText={(v) => { setFinalVal(v); setError(null); }}
+          keyboardType={isTime ? 'default' : 'number-pad'}
+          placeholder={isTime ? '8:00' : '30'}
+          numeric={!isTime}
+        />
+
+        <Input
+          label={`קצב עלייה בכל "קל לי"${isTime ? ' (שניות)' : ''}`}
+          value={step}
+          onChangeText={setStep}
+          keyboardType="number-pad"
+          placeholder="1"
+          numeric
+          hint="בכמה יעלה היעד היומי בכל פעם שתסמן שקל לך."
+        />
+
+        <View>
+          <Text style={[text.labelStrong, styles.label]}>ימי אימון</Text>
+          <DayPicker selected={days} onChange={(d) => { setDays(d); setError(null); }} />
+        </View>
+
+        <View style={styles.switchRow}>
+          <View style={styles.switchText}>
+            <Text style={text.bodyStrong}>מעקב מספרים</Text>
+            <Text style={text.label}>
+              {measured ? 'תרגיל עיקרי — מספרים וגרף מגמה' : 'תרגיל משלים — סימון בלבד'}
             </Text>
-            <TextInput
-              style={styles.input}
-              value={finalVal}
-              onChangeText={setFinalVal}
-              keyboardType={isTime ? 'default' : 'number-pad'}
-              placeholder={isTime ? '8:00' : '30'}
-              placeholderTextColor={colors.creamDim}
-            />
+          </View>
+          <Switch
+            value={measured}
+            onValueChange={setMeasured}
+            trackColor={{ true: colors.accentBorder, false: colors.surface3 }}
+            thumbColor={measured ? colors.accent : colors.text3}
+            accessibilityLabel="מעקב מספרים"
+          />
+        </View>
 
-            <Text style={styles.label}>
-              קצב עלייה בכל "קל לי" {isTime ? '(שניות)' : `(${goal.unit || 'חזרות'})`}
+        {error ? <Text style={[text.label, styles.error]}>{error}</Text> : null}
+
+        <Button label="שמירת היעד" variant="primary" onPress={save} />
+
+        {/* מחיקה היא פעולה הרסנית: אדומה, ודורשת אישור שני */}
+        {confirmDelete ? (
+          <View style={styles.confirm}>
+            <Text style={[text.label, styles.confirmText]}>
+              המחיקה תסיר גם את היסטוריית המדידות של היעד.
             </Text>
-            <TextInput
-              style={styles.input}
-              value={step}
-              onChangeText={setStep}
-              keyboardType="number-pad"
-              placeholder="1"
-              placeholderTextColor={colors.creamDim}
-            />
-
-            <Text style={styles.label}>ימי אימון</Text>
-            <DayPicker selected={days} onChange={setDays} />
-
-            <View style={styles.switchRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.switchTitle}>מעקב מספרים + גרף</Text>
-                <Text style={styles.switchSub}>
-                  {measured ? 'תרגיל עיקרי — מספרים מדויקים וגרף' : 'תרגיל משלים — וי פשוט בלי מספרים'}
-                </Text>
-              </View>
-              <Switch
-                value={measured}
-                onValueChange={setMeasured}
-                trackColor={{ true: colors.goldDim, false: colors.line }}
-                thumbColor={measured ? colors.gold : colors.creamDim}
+            <View style={styles.confirmRow}>
+              <Button label="ביטול" variant="tertiary" onPress={() => setConfirmDelete(false)} />
+              <Button
+                label="מחיקה"
+                variant="danger"
+                onPress={() => { onDelete(goal.id); onClose(); }}
               />
             </View>
-
-            <Pressable style={styles.saveBtn} onPress={save}>
-              <Text style={styles.saveText}>שמירה</Text>
-            </Pressable>
-
-            <Pressable style={styles.deleteBtn} onPress={() => { onDelete(goal.id); onClose(); }}>
-              <Text style={styles.deleteText}>מחיקת היעד</Text>
-            </Pressable>
-
-            <Pressable style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelText}>ביטול</Text>
-            </Pressable>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+          </View>
+        ) : (
+          <Button label="מחיקת היעד" variant="tertiary" onPress={() => setConfirmDelete(true)} />
+        )}
+      </ScrollView>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.card, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg,
-    padding: spacing.xl, maxHeight: '90%',
-  },
-  handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.line, alignSelf: 'center', marginBottom: spacing.md },
-  title: { color: colors.cream, fontSize: font.h3, fontWeight: '800', textAlign: 'right', marginBottom: spacing.md },
-  label: { color: colors.creamDim, fontSize: font.small, textAlign: 'right', marginTop: spacing.md, marginBottom: 6 },
-  input: {
-    backgroundColor: colors.bgDeep, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.line,
-    color: colors.cream, fontSize: font.body, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, textAlign: 'right',
-  },
-  switchRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg },
-  switchTitle: { color: colors.cream, fontSize: font.body, fontWeight: '700', textAlign: 'right' },
-  switchSub: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'right', marginTop: 2 },
-  saveBtn: { backgroundColor: colors.gold, borderRadius: radius.pill, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.xl },
-  saveText: { color: colors.bg, fontWeight: '800', fontSize: font.body },
-  deleteBtn: { paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
-  deleteText: { color: colors.danger, fontWeight: '700', fontSize: font.small },
-  cancelBtn: { paddingVertical: spacing.sm, alignItems: 'center' },
-  cancelText: { color: colors.creamDim, fontSize: font.small },
+  body: { gap: space[4], paddingBottom: space[4] },
+  label: { marginBottom: space[2] },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  switchText: { flex: 1, gap: 2 },
+  error: { color: colors.danger },
+  confirm: { gap: space[3] },
+  confirmText: { textAlign: 'center' },
+  confirmRow: { flexDirection: 'row', gap: space[3] },
 });

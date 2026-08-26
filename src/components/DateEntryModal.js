@@ -1,105 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
-import { colors, radius, spacing, font } from '../theme';
+import { View, Text, StyleSheet } from 'react-native';
+import Sheet from './Sheet';
+import Input from './Input';
+import Button from './Button';
+import { space, colors } from '../design/tokens';
+import { text } from '../design/typography';
 import { dayKey, keyToDate } from '../utils/date';
 
-// הזנת תאריך אמיתי לשלב (יום/חודש/שנה). בלי תלות נייטיב חיצונית.
+// הזנת תאריך אמיתי לשלב.
+// קלט לא תקין אומר בדיוק מה לא בסדר ומה הטווח המותר — הגרסה הקודמת
+// פשוט לא הגיבה, וזה נראה כאילו הכפתור שבור.
 export default function DateEntryModal({ visible, stage, onClose, onSave, onClear }) {
   const [d, setD] = useState('');
   const [m, setM] = useState('');
   const [y, setY] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (visible && stage) {
-      if (stage.date) {
-        const dt = keyToDate(stage.date);
-        setD(String(dt.getDate()));
-        setM(String(dt.getMonth() + 1));
-        setY(String(dt.getFullYear()));
-      } else {
-        setD(''); setM(''); setY('');
-      }
+    if (!visible || !stage) return;
+    setError(null);
+    if (stage.date) {
+      const dt = keyToDate(stage.date);
+      setD(String(dt.getDate()));
+      setM(String(dt.getMonth() + 1));
+      setY(String(dt.getFullYear()));
+    } else {
+      setD(''); setM(''); setY('');
     }
   }, [visible, stage]);
 
   if (!stage) return null;
 
+  const touch = (setter) => (v) => { setter(v); setError(null); };
+
   const save = () => {
     const day = parseInt(d, 10);
     const mon = parseInt(m, 10);
     const yr = parseInt(y, 10);
-    if (!day || !mon || !yr || day < 1 || day > 31 || mon < 1 || mon > 12 || yr < 2025 || yr > 2035) {
-      return; // קלט לא תקין — לא שומרים
+
+    if (isNaN(day) || isNaN(mon) || isNaN(yr)) {
+      setError('חסר יום, חודש או שנה.');
+      return;
     }
+    if (day < 1 || day > 31) { setError('היום צריך להיות בין 1 ל-31.'); return; }
+    if (mon < 1 || mon > 12) { setError('החודש צריך להיות בין 1 ל-12.'); return; }
+    if (yr < 2025 || yr > 2035) { setError('השנה צריכה להיות בין 2025 ל-2035.'); return; }
+
     const dt = new Date(yr, mon - 1, day);
+    if (dt.getDate() !== day || dt.getMonth() !== mon - 1) {
+      setError('התאריך הזה לא קיים בלוח השנה.');
+      return;
+    }
+
     onSave(dayKey(dt));
     onClose();
   };
 
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.card} onPress={() => {}}>
-          <Text style={styles.title}>תאריך עבור: {stage.name}</Text>
-          <Text style={styles.sub}>הזן את התאריך האמיתי כשהוא נודע</Text>
+    <Sheet visible={visible} onClose={onClose}>
+      <Text style={text.title}>{stage.name}</Text>
+      <Text style={[text.bodyDim, styles.sub]}>הזן את התאריך ברגע שהוא נודע.</Text>
 
-          <View style={styles.row}>
-            <Field label="יום" value={d} onChange={setD} max={2} placeholder="15" />
-            <Field label="חודש" value={m} onChange={setM} max={2} placeholder="11" />
-            <Field label="שנה" value={y} onChange={setY} max={4} placeholder="2026" wide />
-          </View>
+      <View style={styles.row}>
+        <Input label="יום" value={d} onChangeText={touch(setD)} keyboardType="number-pad" maxLength={2} placeholder="15" numeric style={styles.field} />
+        <Input label="חודש" value={m} onChangeText={touch(setM)} keyboardType="number-pad" maxLength={2} placeholder="11" numeric style={styles.field} />
+        <Input label="שנה" value={y} onChangeText={touch(setY)} keyboardType="number-pad" maxLength={4} placeholder="2026" numeric style={styles.fieldWide} />
+      </View>
 
-          <Pressable style={styles.saveBtn} onPress={save}>
-            <Text style={styles.saveText}>שמירת תאריך</Text>
-          </Pressable>
+      {error ? <Text style={[text.label, styles.error]}>{error}</Text> : null}
 
-          {stage.date && (
-            <Pressable style={styles.clearBtn} onPress={() => { onClear(); onClose(); }}>
-              <Text style={styles.clearText}>איפוס לתצוגת חודש בלבד</Text>
-            </Pressable>
-          )}
-          <Pressable style={styles.cancelBtn} onPress={onClose}>
-            <Text style={styles.cancelText}>ביטול</Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
+      <View style={styles.actions}>
+        <Button label="ביטול" variant="tertiary" onPress={onClose} />
+        <Button label="שמירת התאריך" variant="primary" onPress={save} />
+      </View>
 
-function Field({ label, value, onChange, max, placeholder, wide }) {
-  return (
-    <View style={[styles.field, wide && { flex: 1.4 }]}>
-      <TextInput
-        style={styles.input}
-        keyboardType="number-pad"
-        value={value}
-        onChangeText={onChange}
-        maxLength={max}
-        placeholder={placeholder}
-        placeholderTextColor={colors.creamDim}
-      />
-      <Text style={styles.fieldLabel}>{label}</Text>
-    </View>
+      {stage.date ? (
+        <Button
+          label="הסרת התאריך"
+          variant="tertiary"
+          onPress={() => { onClear(); onClose(); }}
+          style={styles.clear}
+        />
+      ) : null}
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.xl, width: '100%', maxWidth: 360, borderWidth: 1, borderColor: colors.line },
-  title: { color: colors.cream, fontSize: font.h3, fontWeight: '800', textAlign: 'center' },
-  sub: { color: colors.creamDim, fontSize: font.small, textAlign: 'center', marginTop: 4, marginBottom: spacing.lg },
-  row: { flexDirection: 'row-reverse', gap: spacing.sm, justifyContent: 'center' },
-  field: { flex: 1, alignItems: 'center' },
-  input: {
-    backgroundColor: colors.bgDeep, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.line,
-    color: colors.gold, fontSize: font.h2, fontWeight: '900', textAlign: 'center', width: '100%', paddingVertical: spacing.sm,
-  },
-  fieldLabel: { color: colors.creamDim, fontSize: font.tiny, marginTop: 4 },
-  saveBtn: { backgroundColor: colors.gold, borderRadius: radius.pill, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.xl },
-  saveText: { color: colors.bg, fontWeight: '800', fontSize: font.body },
-  clearBtn: { paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.xs },
-  clearText: { color: colors.creamDim, fontSize: font.small, textDecorationLine: 'underline' },
-  cancelBtn: { paddingVertical: spacing.sm, alignItems: 'center' },
-  cancelText: { color: colors.creamDim, fontSize: font.small },
+  sub: { marginTop: space[1], marginBottom: space[5] },
+  row: { flexDirection: 'row', gap: space[3] },
+  field: { flex: 1 },
+  fieldWide: { flex: 1.4 },
+  error: { color: colors.danger, marginTop: space[3] },
+  actions: { flexDirection: 'row', gap: space[3], marginTop: space[6] },
+  clear: { marginTop: space[2] },
 });

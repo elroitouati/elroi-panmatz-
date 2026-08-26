@@ -1,56 +1,70 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, spacing, font } from '../theme';
+import { colors, radius, space } from '../design/tokens';
+import { text } from '../design/typography';
+import { ltr } from '../design/rtl';
 import { formatValue } from '../utils/fitness';
 
-// גרף עמודות קומפקטי להתקדמות של תרגיל נמדד (מתח, ריצה).
-// בנוי מ-Views בלבד — בלי תלות נייטיב נוספת.
+// ============================================================================
+//  גרף מגמה קומפקטי — 12 המדידות האחרונות.
+//  קו בסיס עמום נותן לעמודות על מה לשבת, והמדידה האחרונה מודגשת:
+//  היא התשובה לשאלה "איפה אני עכשיו", וזו השאלה שבשבילה פותחים את הגרף.
+//  ביעדי זמן הכיוון מתהפך — שיפור הוא עמודה גבוהה, גם כשהמספר קטן.
+// ============================================================================
+
+const H = 56;
+
 export default function MiniChart({ goal }) {
   const data = (goal.history || []).slice(-12);
+
   if (data.length < 2) {
     return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyText}>
-          עוד אין מספיק נתונים לגרף — סמן עוד כמה אימונים כדי לראות מגמה 📊
-        </Text>
-      </View>
+      <Text style={text.label}>
+        אחרי שתי מדידות תופיע כאן מגמת ההתקדמות שלך.
+      </Text>
     );
   }
+
   const values = data.map((d) => d.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
-
-  // גובה יחסי; בריצה (lowerIsBetter) הופכים כך ששיפור = עמודה גבוהה
-  const heightFor = (v) => {
-    const norm = (v - min) / span; // 0..1
-    const shown = goal.lowerIsBetter ? 1 - norm : norm;
-    return 12 + shown * 56; // 12..68
-  };
-
   const best = goal.lowerIsBetter ? min : max;
+  const lastIndex = data.length - 1;
+
+  const heightFor = (v) => {
+    const norm = (v - min) / span;
+    return 8 + (goal.lowerIsBetter ? 1 - norm : norm) * (H - 8);
+  };
 
   return (
     <View>
-      <View style={styles.chart}>
+      <View style={styles.plot}>
+        <View style={styles.baseline} />
         {data.map((d, i) => {
-          const isBest = d.value === best;
+          const isLast = i === lastIndex;
           return (
             <View key={i} style={styles.col}>
               <View
                 style={[
                   styles.bar,
-                  { height: heightFor(d.value), backgroundColor: isBest ? colors.gold : colors.goldDim },
+                  {
+                    height: heightFor(d.value),
+                    backgroundColor: isLast ? colors.accent : colors.surface3,
+                  },
                 ]}
               />
             </View>
           );
         })}
       </View>
+
       <View style={styles.legend}>
-        <Text style={styles.legendText}>אחרון: {formatValue(goal, values[values.length - 1])}</Text>
-        <Text style={[styles.legendText, { color: colors.gold }]}>
-          שיא: {formatValue(goal, best)}
+        <Text style={text.label}>
+          אחרון {ltr(formatValue(goal, values[lastIndex]))}
+        </Text>
+        <Text style={[text.label, styles.best]}>
+          שיא {ltr(formatValue(goal, best))}
         </Text>
       </View>
     </View>
@@ -58,27 +72,23 @@ export default function MiniChart({ goal }) {
 }
 
 const styles = StyleSheet.create({
-  chart: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-end',
-    height: 72,
-    gap: 4,
+  // 'row' — תחת RTL המדידה הישנה ביותר מימין והחדשה משמאל,
+  // בהתאם לכיוון הקריאה.
+  plot: { flexDirection: 'row', alignItems: 'flex-end', height: H, gap: 3 },
+  baseline: {
+    position: 'absolute',
+    start: 0,
+    end: 0,
+    bottom: 0,
+    height: 1,
+    backgroundColor: colors.border,
   },
-  col: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  bar: { width: '100%', borderRadius: 7, minHeight: 12 },
+  col: { flex: 1, justifyContent: 'flex-end' },
+  bar: { width: '100%', borderRadius: radius.sm, minHeight: 8 },
   legend: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.sm,
+    marginTop: space[2],
   },
-  legendText: { color: colors.creamDim, fontSize: font.tiny },
-  empty: {
-    paddingVertical: spacing.md,
-  },
-  emptyText: {
-    color: colors.creamDim,
-    fontSize: font.tiny,
-    textAlign: 'right',
-    lineHeight: 18,
-  },
+  best: { color: colors.accent },
 });

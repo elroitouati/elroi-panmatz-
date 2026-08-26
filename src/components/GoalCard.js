@@ -1,149 +1,199 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
+import Tile from './Tile';
+import Num from './Num';
+import Button from './Button';
 import ProgressBar from './ProgressBar';
 import MiniChart from './MiniChart';
 import IconBadge from './IconBadge';
-import StatTile from './StatTile';
-import { colors, radius, spacing, font } from '../theme';
+import { colors, space, radius, touch, state as st } from '../design/tokens';
+import { text } from '../design/typography';
 import { formatValue, unitLabel, goalProgress, reachedFinal, atStart, categoryIcon } from '../utils/fitness';
 import { HEB_WEEKDAYS_SHORT } from '../utils/date';
 
-export default function GoalCard({ goal, todayDone, onToggleEnabled, onEdit, onBump, onLower, onMarkDone, onUnmark }) {
-  const measured = goal.tracking === 'measured';
-  const done = reachedFinal(goal) || goal.maintenance;
-  const minReached = atStart(goal);
-  const daysText = goal.trainingDays.map((d) => HEB_WEEKDAYS_SHORT[d]).join(' · ');
+// ============================================================================
+//  כרטיס יעד.
+//  פעולה ראשית אחת בכרטיס — "סמן ביצוע". כוונון הרמה הוא סרגל מדורג
+//  קומפקטי ולא שני כפתורים מתחרים, כדי שההיררכיה תישאר חד-משמעית.
+// ============================================================================
 
+function Tag({ label, tone = 'neutral' }) {
+  const isAccent = tone === 'accent';
   return (
-    <Card highlight={goal.emphasis} style={!goal.enabled && styles.disabled}>
-      {/* כותרת */}
-      <View style={styles.header}>
-        <Pressable onPress={() => onToggleEnabled(goal.id)} hitSlop={8}>
-          <IconBadge icon={categoryIcon(goal.category)} size={44} active={goal.enabled} />
-        </Pressable>
-
-        <View style={{ flex: 1 }}>
-          <View style={styles.titleRow}>
-            <Text style={styles.name}>{goal.name}</Text>
-            {goal.emphasis && <Tag text="פוקוס" bg={colors.goldDim} fg={colors.bg} />}
-            {goal.maintenance && <Tag text="תחזוקה" bg={colors.rest} fg={colors.cream} />}
-            {!measured && <Tag text="משלים" bg={colors.bgDeep} fg={colors.creamDim} />}
-          </View>
-          <Text style={styles.days}>ימי אימון: {daysText || '—'}</Text>
-        </View>
-
-        <Pressable onPress={() => onEdit(goal)} hitSlop={8}>
-          <Ionicons name="create-outline" size={22} color={colors.creamDim} />
-        </Pressable>
-      </View>
-
-      {/* יעד מתקדם — רק לתרגילים נמדדים */}
-      {measured && (
-        <View style={styles.progressBlock}>
-          <View style={styles.numbersRow}>
-            <StatTile
-              icon={categoryIcon(goal.category)}
-              value={`${formatValue(goal, goal.current)} ${unitLabel(goal)}`}
-              label="יעד היום"
-              emphasis
-            />
-            <StatTile
-              icon="flag-outline"
-              value={`${formatValue(goal, goal.final)} ${unitLabel(goal)}`}
-              label="יעד סופי"
-            />
-          </View>
-          <ProgressBar progress={goalProgress(goal)} height={8} />
-        </View>
-      )}
-
-      {/* בקרת רמה — "קשה לי" / "קל לי" — רק לתרגילים נמדדים */}
-      {measured && (
-        <View style={styles.levelRow}>
-          <Pressable
-            style={[styles.actionBtn, styles.hardBtn, minReached && styles.btnDisabled]}
-            onPress={() => onLower(goal.id)}
-            disabled={minReached}
-          >
-            <Ionicons name="trending-down" size={16} color={minReached ? colors.creamDim : colors.cream} />
-            <Text style={[styles.hardText, minReached && { color: colors.creamDim }]}>קשה לי</Text>
-          </Pressable>
-
-          {done ? (
-            <View style={[styles.actionBtn, styles.maintBtn]}>
-              <Ionicons name="shield-checkmark" size={16} color={colors.success} />
-              <Text style={styles.maintText}>תחזוקה</Text>
-            </View>
-          ) : (
-            <Pressable style={[styles.actionBtn, styles.easyBtn]} onPress={() => onBump(goal.id)}>
-              <Ionicons name="trending-up" size={16} color={colors.gold} />
-              <Text style={styles.easyText}>קל לי</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-
-      {/* סימון ביצוע */}
-      <View style={styles.actions}>
-        {todayDone ? (
-          <Pressable style={[styles.actionBtn, styles.doneBtn]} onPress={() => onUnmark(goal.id)}>
-            <Ionicons name="checkmark-circle" size={18} color={colors.bg} />
-            <Text style={styles.doneText}>בוצע היום</Text>
-          </Pressable>
-        ) : (
-          <Pressable style={[styles.actionBtn, styles.markBtn]} onPress={() => onMarkDone(goal)}>
-            <Ionicons name="ellipse-outline" size={18} color={colors.cream} />
-            <Text style={styles.markText}>סמן ביצוע</Text>
-          </Pressable>
-        )}
-      </View>
-
-      {/* גרף התקדמות — רק לתרגילים נמדדים */}
-      {measured && (
-        <View style={styles.chart}>
-          <MiniChart goal={goal} />
-        </View>
-      )}
-    </Card>
-  );
-}
-
-function Tag({ text, bg, fg }) {
-  return (
-    <View style={[styles.tag, { backgroundColor: bg }]}>
-      <Text style={[styles.tagText, { color: fg }]}>{text}</Text>
+    <View style={[styles.tag, isAccent ? styles.tagAccent : styles.tagNeutral]}>
+      <Text style={[text.label, isAccent ? styles.tagTextAccent : styles.tagText]}>
+        {label}
+      </Text>
     </View>
   );
 }
 
+function StepButton({ icon, label, onPress, disabled }) {
+  return (
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => [
+        styles.step,
+        pressed && !disabled && styles.stepPressed,
+        disabled && { opacity: st.disabledOpacity },
+      ]}
+    >
+      <Ionicons name={icon} size={18} color={colors.text1} />
+    </Pressable>
+  );
+}
+
+export default function GoalCard({
+  goal, todayDone, onToggleEnabled, onEdit, onBump, onLower, onMarkDone, onUnmark,
+}) {
+  const measured = goal.tracking === 'measured';
+  const maxed = reachedFinal(goal) || goal.maintenance;
+  const minned = atStart(goal);
+  const days = goal.trainingDays.map((d) => HEB_WEEKDAYS_SHORT[d]).join(' · ');
+
+  return (
+    <Tile style={[styles.card, !goal.enabled && styles.disabled]}>
+      {/* כותרת */}
+      <View style={styles.head}>
+        <Pressable
+          onPress={() => onToggleEnabled(goal.id)}
+          accessibilityRole="switch"
+          accessibilityLabel={`${goal.name} — מעקב`}
+          accessibilityState={{ checked: goal.enabled }}
+          hitSlop={8}
+        >
+          <IconBadge icon={categoryIcon(goal.category)} size={touch.min} active={goal.enabled} />
+        </Pressable>
+
+        <View style={styles.headText}>
+          <View style={styles.titleRow}>
+            <Text style={text.bodyStrong} numberOfLines={1}>{goal.name}</Text>
+            {goal.emphasis ? <Tag label="פוקוס" tone="accent" /> : null}
+            {goal.maintenance ? <Tag label="תחזוקה" /> : null}
+          </View>
+          <Text style={text.label} numberOfLines={1}>
+            {days ? `אימון ${days}` : 'לא נקבעו ימי אימון'}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={() => onEdit(goal)}
+          accessibilityRole="button"
+          accessibilityLabel={`עריכת ${goal.name}`}
+          hitSlop={10}
+          style={({ pressed }) => [styles.edit, pressed && styles.stepPressed]}
+        >
+          <Ionicons name="create-outline" size={18} color={colors.text2} />
+        </Pressable>
+      </View>
+
+      {measured ? (
+        <>
+          {/* מספרים — תווית מעל, ערך מתחת */}
+          <View style={styles.numbers}>
+            <View style={styles.numCol}>
+              <Text style={text.label}>יעד היום</Text>
+              <Num
+                value={formatValue(goal, goal.current)}
+                unit={unitLabel(goal)}
+                size="statSm"
+                color={colors.accent}
+                style={styles.numStart}
+              />
+            </View>
+            <View style={styles.numCol}>
+              <Text style={text.label}>יעד סופי</Text>
+              <Num
+                value={formatValue(goal, goal.final)}
+                unit={unitLabel(goal)}
+                size="statSm"
+                color={colors.text2}
+                style={styles.numStart}
+              />
+            </View>
+          </View>
+
+          <ProgressBar progress={goalProgress(goal)} label={`התקדמות ב${goal.name}`} />
+
+          {/* כוונון רמה — סרגל אחד, לא שני כפתורים מתחרים */}
+          <View style={styles.stepper}>
+            <StepButton
+              icon="remove"
+              label="קשה לי — הורדת היעד היומי"
+              onPress={() => onLower(goal.id)}
+              disabled={minned}
+            />
+            <Text style={[text.label, styles.stepperHint]} numberOfLines={1}>
+              {maxed ? 'ברמת היעד הסופי' : minned ? 'ברמת הפתיחה' : 'כוונון היעד היומי'}
+            </Text>
+            <StepButton
+              icon="add"
+              label="קל לי — העלאת היעד היומי"
+              onPress={() => onBump(goal.id)}
+              disabled={maxed}
+            />
+          </View>
+        </>
+      ) : null}
+
+      {/* פעולה ראשית יחידה */}
+      <Button
+        label={todayDone ? 'בוצע היום' : 'סמן ביצוע'}
+        icon={todayDone ? 'checkmark' : undefined}
+        variant={todayDone ? 'secondary' : 'primary'}
+        onPress={() => (todayDone ? onUnmark(goal.id) : onMarkDone(goal))}
+      />
+
+      {measured ? (
+        <View style={styles.chart}>
+          <MiniChart goal={goal} />
+        </View>
+      ) : null}
+    </Tile>
+  );
+}
+
 const styles = StyleSheet.create({
-  disabled: { opacity: 0.55 },
-  header: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
-  titleRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  name: { color: colors.cream, fontSize: font.body, fontWeight: '800' },
-  days: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'right', marginTop: 3 },
-  tag: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 1 },
-  tagText: { fontSize: 10, fontWeight: '800' },
-  progressBlock: { marginTop: spacing.lg },
-  numbersRow: { flexDirection: 'row-reverse', gap: spacing.sm, marginBottom: spacing.md },
-  levelRow: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.lg },
-  actions: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.sm },
-  actionBtn: {
-    flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: spacing.md, borderRadius: radius.pill,
+  card: { gap: space[4] },
+  disabled: { opacity: 0.5 },
+
+  head: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  headText: { flex: 1, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space[2], flexWrap: 'wrap' },
+  edit: {
+    width: touch.min, height: touch.min, borderRadius: radius.pill,
+    alignItems: 'center', justifyContent: 'center',
   },
-  easyBtn: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.goldDim },
-  easyText: { color: colors.gold, fontWeight: '700', fontSize: font.small },
-  hardBtn: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.line },
-  hardText: { color: colors.cream, fontWeight: '700', fontSize: font.small },
-  btnDisabled: { opacity: 0.5 },
-  maintBtn: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.rest },
-  maintText: { color: colors.success, fontWeight: '700', fontSize: font.small },
-  markBtn: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.line },
-  markText: { color: colors.cream, fontWeight: '700', fontSize: font.small },
-  doneBtn: { backgroundColor: colors.gold },
-  doneText: { color: colors.bg, fontWeight: '800', fontSize: font.small },
-  chart: { marginTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: spacing.md },
+
+  tag: { borderRadius: radius.pill, paddingHorizontal: space[2], paddingVertical: 2 },
+  tagAccent: { backgroundColor: colors.accentSurface },
+  tagNeutral: { backgroundColor: colors.surface2 },
+  tagText: { color: colors.text2 },
+  tagTextAccent: { color: colors.accent },
+
+  numbers: { flexDirection: 'row', gap: space[6] },
+  numCol: { flex: 1, gap: space[1] },
+  numStart: { justifyContent: 'flex-start' },
+
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[3],
+  },
+  step: {
+    width: touch.min, height: touch.min, borderRadius: radius.md,
+    backgroundColor: colors.surface1,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepPressed: { backgroundColor: colors.surface3 },
+  stepperHint: { flex: 1, textAlign: 'center' },
+
+  chart: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space[4] },
 });

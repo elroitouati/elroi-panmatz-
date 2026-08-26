@@ -25,13 +25,14 @@ export default function Num({
 
   return (
     <View style={[styles.row, style]}>
-      <Text style={[preset, color && { color }]} allowFontScaling={false}>
+      <Text style={[preset, color && { color }]} allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit>
         {ltr(value)}
       </Text>
       {unit ? (
         <Text
           style={[preset, unitStyle(numberSize), color && { color }]}
           allowFontScaling={false}
+          numberOfLines={1}
         >
           {unit}
         </Text>

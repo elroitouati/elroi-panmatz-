@@ -1,27 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet } from 'react-native';
 import Screen from '../components/Screen';
-import Card from '../components/Card';
+import Tile from '../components/Tile';
+import Button from '../components/Button';
 import GoalCard from '../components/GoalCard';
+import EmptyState from '../components/EmptyState';
 import ValueEntryModal from '../components/ValueEntryModal';
 import EditGoalModal from '../components/EditGoalModal';
-import { colors, spacing, radius, font } from '../theme';
+import { space } from '../design/tokens';
 import { useApp } from '../context/AppContext';
 import { todayKey } from '../utils/date';
 
 export default function FitnessScreen() {
-  const { state, toggleGoalEnabled, updateGoal, deleteGoal, bumpGoal, lowerGoal, markGoalToday, unmarkGoalToday, addGoal } = useApp();
+  const {
+    state, toggleGoalEnabled, updateGoal, deleteGoal,
+    bumpGoal, lowerGoal, markGoalToday, unmarkGoalToday, addGoal,
+  } = useApp();
   const [valueGoal, setValueGoal] = useState(null);
   const [editGoal, setEditGoal] = useState(null);
 
   if (!state) return null;
-  const today = todayKey();
-  const todayLog = state.logs[today];
+  const todayLog = state.logs[todayKey()];
+  const enabled = state.goals.filter((g) => g.enabled).length;
 
-  const enabledCount = state.goals.filter((g) => g.enabled).length;
-
-  // סימון ביצוע: תרגיל נמדד פותח הזנת ערך, תרגיל משלים מסמן ישירות
+  // יעד נמדד פותח הזנת תוצאה; יעד וי מסומן ישירות.
   const handleMarkDone = (goal) => {
     if (goal.tracking === 'measured') setValueGoal(goal);
     else markGoalToday(goal.id, null);
@@ -33,45 +35,52 @@ export default function FitnessScreen() {
       category: 'calisthenics',
       tracking: 'measured',
       unit: 'חזרות',
-      start: 5,
-      current: 5,
-      final: 20,
-      step: 2,
+      start: 5, current: 5, final: 20, step: 2,
     });
-    // פתיחת עריכה מיד על היעד החדש
     setTimeout(() => {
-      const g = { id, name: 'יעד חדש', unit: 'חזרות', tracking: 'measured', final: 20, step: 2, trainingDays: [0, 1, 2, 3, 4], current: 5 };
-      setEditGoal(g);
+      setEditGoal({
+        id, name: 'יעד חדש', unit: 'חזרות', tracking: 'measured',
+        final: 20, step: 2, current: 5, trainingDays: [0, 1, 2, 3, 4],
+      });
     }, 60);
   };
 
   return (
-    <Screen title="כושר" subtitle={`${enabledCount} יעדים במעקב · נגיש בכל שלב`}>
-      <Card style={styles.tip}>
-        <Ionicons name="information-circle-outline" size={20} color={colors.gold} />
-        <Text style={styles.tipText}>
-          כל יעד מתקדם בנפרד. סמן "קל לי" כדי להעלות את היעד היומי בהדרגה עד היעד הסופי — ואז הוא עובר למצב תחזוקה אוטומטי.
-        </Text>
-      </Card>
+    <Screen title="כושר" subtitle={`${enabled} יעדים במעקב`}>
+      {state.goals.length === 0 ? (
+        <Tile>
+          <EmptyState
+            icon="barbell-outline"
+            title="אין עדיין יעדים"
+            body="הוסף יעד ראשון, קבע לו יעד סופי וימי אימון, והאפליקציה תעלה אותו בהדרגה."
+            actionLabel="הוספת היעד הראשון"
+            onAction={handleAddGoal}
+          />
+        </Tile>
+      ) : (
+        <View style={styles.list}>
+          {state.goals.map((goal) => (
+            <GoalCard
+              key={goal.id}
+              goal={goal}
+              todayDone={!!todayLog?.goals?.[goal.id]?.done}
+              onToggleEnabled={toggleGoalEnabled}
+              onEdit={setEditGoal}
+              onBump={bumpGoal}
+              onLower={lowerGoal}
+              onMarkDone={handleMarkDone}
+              onUnmark={unmarkGoalToday}
+            />
+          ))}
 
-      {state.goals.map((goal) => (
-        <GoalCard
-          key={goal.id}
-          goal={goal}
-          todayDone={!!todayLog?.goals?.[goal.id]?.done}
-          onToggleEnabled={toggleGoalEnabled}
-          onEdit={setEditGoal}
-          onBump={bumpGoal}
-          onLower={lowerGoal}
-          onMarkDone={handleMarkDone}
-          onUnmark={unmarkGoalToday}
-        />
-      ))}
-
-      <Pressable style={styles.addBtn} onPress={handleAddGoal}>
-        <Ionicons name="add-circle-outline" size={22} color={colors.gold} />
-        <Text style={styles.addText}>הוספת יעד חדש</Text>
-      </Pressable>
+          <Button
+            label="הוספת יעד"
+            icon="add"
+            variant="secondary"
+            onPress={handleAddGoal}
+          />
+        </View>
+      )}
 
       <ValueEntryModal
         visible={!!valueGoal}
@@ -95,12 +104,5 @@ export default function FitnessScreen() {
 }
 
 const styles = StyleSheet.create({
-  tip: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: spacing.sm },
-  tipText: { flex: 1, color: colors.creamDim, fontSize: font.small, textAlign: 'right', lineHeight: 20 },
-  addBtn: {
-    flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    borderWidth: 1, borderColor: colors.goldDim, borderStyle: 'dashed', borderRadius: radius.md,
-    paddingVertical: spacing.lg, marginTop: spacing.sm,
-  },
-  addText: { color: colors.gold, fontWeight: '700', fontSize: font.body },
+  list: { gap: space[3] },
 });

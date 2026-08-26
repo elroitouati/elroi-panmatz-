@@ -1,72 +1,56 @@
 import React, { useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, Animated, Easing, Pressable, Dimensions } from 'react-native';
+import { Modal, View, Text, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, font } from '../theme';
+import Button from './Button';
+import { colors, radius, space, motion } from '../design/tokens';
+import { text } from '../design/typography';
+import useReducedMotion from '../design/useReducedMotion';
 
-const { width } = Dimensions.get('window');
+// ============================================================================
+//  הגעה ליעד הסופי.
+//  בלי קונפטי: הכיוון הוא ציוד ומשמעת, לא צעצוע. במקום זה חותם שנחתם —
+//  תג שנכנס פנימה ב-400ms עם עקומה קפיצית קלה, וטקסט שעולה אחריו.
+//  כשהמשתמש ביקש להפחית תנועה, הכל מופיע מיד בלי אנימציה.
+// ============================================================================
 
-// אנימציה חגיגית בהגעה ליעד הסופי, ואז מעבר למצב תחזוקה.
 export default function CelebrationModal({ goal, onClose }) {
-  const scale = useRef(new Animated.Value(0)).current;
-  const confetti = useRef([...Array(14)].map(() => new Animated.Value(0))).current;
+  const reduced = useReducedMotion();
+  const enter = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!goal) return;
-    scale.setValue(0);
-    Animated.spring(scale, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }).start();
-    confetti.forEach((v, i) => {
-      v.setValue(0);
-      Animated.timing(v, {
-        toValue: 1,
-        duration: 1100 + (i % 5) * 250,
-        delay: i * 40,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    });
-  }, [goal]);
+    if (reduced) { enter.setValue(1); return; }
+    enter.setValue(0);
+    Animated.timing(enter, {
+      toValue: 1,
+      duration: motion.duration.celebrate,   // 400ms — התקרה
+      easing: motion.easing.spring,
+      useNativeDriver: true,
+    }).start();
+  }, [goal, reduced]);
 
   if (!goal) return null;
 
-  const pieces = ['#f0c239', '#f5f2e6', '#8bbf5a', '#c9a233'];
+  const scale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] });
+  const lift = enter.interpolate({ inputRange: [0, 1], outputRange: [12, 0] });
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        {confetti.map((v, i) => {
-          const startX = (i / confetti.length) * width;
-          const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [-40, 620] });
-          const rotate = v.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${(i % 2 ? 1 : -1) * 540}deg`] });
-          const opacity = v.interpolate({ inputRange: [0, 0.85, 1], outputRange: [1, 1, 0] });
-          return (
-            <Animated.View
-              key={i}
-              style={[
-                styles.confetti,
-                {
-                  left: startX,
-                  backgroundColor: pieces[i % pieces.length],
-                  transform: [{ translateY }, { rotate }],
-                  opacity,
-                },
-              ]}
-            />
-          );
-        })}
-
-        <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
-          <View style={styles.badge}>
-            <Ionicons name="trophy" size={44} color={colors.bg} />
+      <View style={styles.scrim}>
+        <Animated.View style={[styles.panel, { opacity: enter, transform: [{ scale }] }]}>
+          <View style={styles.seal}>
+            <Ionicons name="shield-checkmark" size={34} color={colors.onAccent} />
           </View>
-          <Text style={styles.title}>הגעת ליעד הסופי!</Text>
-          <Text style={styles.goalName}>{goal.name}</Text>
-          <Text style={styles.body}>
-            כל הכבוד — הגעת ליעד. מעכשיו {goal.name} עובר ל<Text style={styles.bold}>מצב תחזוקה</Text>:
-            ממשיכים לתרגל ברמת היעד הסופי כל יום עד הקבלה, בלי העלאות נוספות.
-          </Text>
-          <Pressable style={styles.btn} onPress={onClose}>
-            <Text style={styles.btnText}>ממשיכים לשמר 💪</Text>
-          </Pressable>
+
+          <Animated.View style={{ transform: [{ translateY: lift }], opacity: enter }}>
+            <Text style={[text.label, styles.center]}>הגעת ליעד הסופי</Text>
+            <Text style={[text.title, styles.center, styles.name]}>{goal.name}</Text>
+            <Text style={[text.bodyDim, styles.center, styles.body]}>
+              מכאן היעד עובר למצב תחזוקה: ממשיכים ברמה הזו עד הקבלה, בלי העלאות נוספות.
+            </Text>
+          </Animated.View>
+
+          <Button label="הבנתי" variant="primary" onPress={onClose} style={styles.cta} />
         </Animated.View>
       </View>
     </Modal>
@@ -74,60 +58,26 @@ export default function CelebrationModal({ goal, onClose }) {
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
+  scrim: {
+    flex: 1, backgroundColor: colors.scrim,
+    alignItems: 'center', justifyContent: 'center', padding: space[5],
   },
-  confetti: {
-    position: 'absolute',
-    top: 0,
-    width: 10,
-    height: 16,
-    borderRadius: 2,
-  },
-  card: {
-    backgroundColor: colors.card,
+  panel: {
+    width: '100%', maxWidth: 340,
+    backgroundColor: colors.bg,
     borderRadius: radius.lg,
-    padding: spacing.xl,
+    borderWidth: 1, borderColor: colors.accentBorder,
+    padding: space[6],
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.gold,
-    width: '100%',
-    maxWidth: 360,
   },
-  badge: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
+  seal: {
+    width: 64, height: 64, borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: space[5],
   },
-  title: { color: colors.gold, fontSize: font.h2, fontWeight: '800', textAlign: 'center' },
-  goalName: {
-    color: colors.cream,
-    fontSize: font.h3,
-    fontWeight: '700',
-    marginTop: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  body: {
-    color: colors.creamDim,
-    fontSize: font.small,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-  },
-  bold: { color: colors.cream, fontWeight: '700' },
-  btn: {
-    backgroundColor: colors.gold,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.pill,
-  },
-  btnText: { color: colors.bg, fontWeight: '800', fontSize: font.body },
+  center: { textAlign: 'center' },
+  name: { marginTop: space[1] },
+  body: { marginTop: space[3] },
+  cta: { marginTop: space[6] },
 });

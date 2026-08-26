@@ -187,12 +187,12 @@ export function AppProvider({ children }) {
     const goal = state.goals.find((g) => g.id === id);
     if (event === 'final') {
       setCelebration(goal ? { ...goal } : { name: 'יעד' });
-      sendReinforcement('הגעת ליעד הסופי! 🏅', `${goal?.name || 'יעד'} עבר למצב תחזוקה — כל הכבוד!`);
+      sendReinforcement('הגעת ליעד הסופי', `${goal?.name || 'יעד'} עבר למצב תחזוקה — כל הכבוד!`);
     } else if (event === 'up') {
-      flash('שדרוג יעד! היעד היומי עלה 📈');
-      sendReinforcement('שדרוג יעד 📈', `העלית את היעד היומי ב${goal?.name || 'יעד'}.`);
+      flash('היעד היומי עלה');
+      sendReinforcement('שדרוג יעד', `העלית את היעד היומי ב${goal?.name || 'יעד'}.`);
     } else if (event === 'maintenance') {
-      flash('היעד כבר במצב תחזוקה — ממשיכים לשמר 💪');
+      flash('היעד כבר ברמת היעד הסופי');
     }
     return event;
   };
@@ -212,7 +212,7 @@ export function AppProvider({ children }) {
       });
       return { ...s, goals };
     });
-    if (event === 'down') flash('הורדת רמה — ממשיכים בקצב שנוח לך 👍');
+    if (event === 'down') flash('היעד היומי ירד');
     else flash('כבר ברמת הבסיס של היעד');
     return event;
   };
@@ -243,9 +243,9 @@ export function AppProvider({ children }) {
       };
     });
     if (pb) {
-      flash('שיא אישי חדש! 🔥');
+      flash('שיא אישי חדש');
       const goal = state.goals.find((g) => g.id === id);
-      sendReinforcement('שיא אישי חדש 🔥', `רשמת שיא חדש ב${goal?.name || 'יעד'}. ממשיכים לטפס!`);
+      sendReinforcement('שיא אישי חדש', `רשמת שיא חדש ב${goal?.name || 'יעד'}. ממשיכים לטפס!`);
     }
   };
 

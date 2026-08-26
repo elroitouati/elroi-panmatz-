@@ -1,24 +1,35 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text } from 'react-native';
-import { colors, radius, spacing, font } from '../theme';
+import { Animated, Text, StyleSheet } from 'react-native';
+import { colors, radius, space, motion } from '../design/tokens';
+import { text } from '../design/typography';
+import useReducedMotion from '../design/useReducedMotion';
 
-// הודעת חיזוק צפה בתוך האפליקציה (שיא, שדרוג יעד וכו').
+// הודעת חיזוק קצרה. עולה מעל פס הניווט ונעלמת בעצמה.
 export default function Toast({ message }) {
-  const y = useRef(new Animated.Value(80)).current;
+  const reduced = useReducedMotion();
+  const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (message) {
-      Animated.spring(y, { toValue: 0, useNativeDriver: true, friction: 7 }).start();
-    } else {
-      Animated.timing(y, { toValue: 80, duration: 200, useNativeDriver: true }).start();
-    }
-  }, [message]);
+    if (reduced) { anim.setValue(message ? 1 : 0); return; }
+    Animated.timing(anim, {
+      toValue: message ? 1 : 0,
+      duration: motion.duration.fade,
+      easing: motion.easing.standard,
+      useNativeDriver: true,
+    }).start();
+  }, [message, reduced]);
 
   if (!message) return null;
 
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] });
+
   return (
-    <Animated.View style={[styles.wrap, { transform: [{ translateY: y }] }]} pointerEvents="none">
-      <Text style={styles.text}>{message}</Text>
+    <Animated.View
+      style={[styles.wrap, { opacity: anim, transform: [{ translateY }] }]}
+      pointerEvents="none"
+      accessibilityLiveRegion="polite"
+    >
+      <Text style={[text.label, styles.text]}>{message}</Text>
     </Animated.View>
   );
 }
@@ -26,18 +37,15 @@ export default function Toast({ message }) {
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    bottom: 96,
+    bottom: 116,
     alignSelf: 'center',
-    backgroundColor: colors.gold,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
+    maxWidth: '88%',
+    backgroundColor: colors.surface3,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.pill,
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-    maxWidth: '90%',
+    paddingVertical: space[3],
+    paddingHorizontal: space[5],
   },
-  text: { color: colors.bg, fontWeight: '800', fontSize: font.small, textAlign: 'center' },
+  text: { color: colors.text1, textAlign: 'center' },
 });

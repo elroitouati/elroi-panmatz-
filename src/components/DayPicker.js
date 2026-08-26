@@ -1,21 +1,33 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { colors, radius, spacing, font } from '../theme';
-import { HEB_WEEKDAYS_SHORT } from '../utils/date';
+import { colors, radius, space, touch } from '../design/tokens';
+import { text } from '../design/typography';
+import { HEB_WEEKDAYS_SHORT, HEB_WEEKDAYS_FULL } from '../utils/date';
 
-// בורר ימי אימון שבועי (0=ראשון..6=שבת). RTL: ראשון מימין.
+// בורר ימי אימון. 'row' מתהפך תחת RTL כך שיום ראשון יושב מימין.
+// המצב הנבחר מסומן במילוי ובמשקל, לא רק בצבע.
 export default function DayPicker({ selected, onChange }) {
-  const toggle = (d) => {
-    if (selected.includes(d)) onChange(selected.filter((x) => x !== d));
-    else onChange([...selected, d]);
-  };
+  const toggle = (d) =>
+    onChange(selected.includes(d) ? selected.filter((x) => x !== d) : [...selected, d]);
+
   return (
     <View style={styles.row}>
-      {HEB_WEEKDAYS_SHORT.map((label, d) => {
+      {HEB_WEEKDAYS_SHORT.map((short, d) => {
         const on = selected.includes(d);
         return (
-          <Pressable key={d} onPress={() => toggle(d)} style={[styles.day, on && styles.dayOn]}>
-            <Text style={[styles.dayText, on && styles.dayTextOn]}>{label}</Text>
+          <Pressable
+            key={d}
+            onPress={() => toggle(d)}
+            accessibilityRole="checkbox"
+            accessibilityLabel={`יום ${HEB_WEEKDAYS_FULL[d]}`}
+            accessibilityState={{ checked: on }}
+            style={({ pressed }) => [
+              styles.day,
+              on && styles.dayOn,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[text.label, on ? styles.textOn : styles.textOff]}>{short}</Text>
           </Pressable>
         );
       })}
@@ -24,18 +36,19 @@ export default function DayPicker({ selected, onChange }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row-reverse', justifyContent: 'space-between', gap: 6 },
+  row: { flexDirection: 'row', gap: space[2] },
   day: {
     flex: 1,
-    aspectRatio: 1,
+    minHeight: touch.min,
     borderRadius: radius.sm,
-    backgroundColor: colors.bgDeep,
+    backgroundColor: colors.surface1,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayOn: { backgroundColor: colors.gold, borderColor: colors.gold },
-  dayText: { color: colors.creamDim, fontSize: font.small, fontWeight: '700' },
-  dayTextOn: { color: colors.bg, fontWeight: '800' },
+  dayOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  pressed: { opacity: 0.8 },
+  textOn: { color: colors.onAccent },
+  textOff: { color: colors.text2 },
 });
