@@ -49,7 +49,7 @@ function StepButton({ icon, label, onPress, disabled }) {
 }
 
 export default function GoalCard({
-  goal, todayDone, onToggleEnabled, onEdit, onBump, onLower, onMarkDone, onUnmark,
+  goal, todayDone, isNext, onToggleEnabled, onEdit, onBump, onLower, onMarkDone, onUnmark,
 }) {
   const measured = goal.tracking === 'measured';
   const maxed = reachedFinal(goal) || goal.maintenance;
@@ -141,11 +141,12 @@ export default function GoalCard({
         </>
       ) : null}
 
-      {/* פעולה ראשית יחידה */}
+      {/* רק היעד הבא בתור נושא את הכפתור הראשי — כך יש במסך
+          פעולה ראשית אחת שאומרת "זה מה שעושים עכשיו" */}
       <Button
         label={todayDone ? 'בוצע היום' : 'סמן ביצוע'}
         icon={todayDone ? 'checkmark' : undefined}
-        variant={todayDone ? 'secondary' : 'primary'}
+        variant={!todayDone && isNext ? 'primary' : 'secondary'}
         onPress={() => (todayDone ? onUnmark(goal.id) : onMarkDone(goal))}
       />
 

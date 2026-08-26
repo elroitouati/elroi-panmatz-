@@ -153,10 +153,7 @@ export default function CalendarScreen() {
         <StatTile label="רצף נוכחי" value={stats.streak} unit={stats.streak === 1 ? 'יום' : 'ימים'} icon="flame-outline" accent />
         <StatTile label="אימונים החודש" value={stats.workouts} icon="barbell-outline" />
       </View>
-      <View style={styles.bento}>
-        <StatTile label="עמידה ביעד" value={stats.adherence} unit="%" icon="checkmark-done-outline" />
-        <StatTile label="ימי אימון בשבוע" value={new Set(enabledGoals.flatMap((g) => g.trainingDays)).size} icon="calendar-outline" />
-      </View>
+      <StatTile label="עמידה ביעד החודש" value={stats.adherence} unit="%" icon="checkmark-done-outline" />
     </Screen>
   );
 }

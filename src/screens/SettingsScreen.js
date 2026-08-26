@@ -68,7 +68,6 @@ export default function SettingsScreen({ navigation }) {
       <Text style={[text.bodyStrong, styles.sectionTitle]}>התראות</Text>
       <Tile style={styles.notifTile}>
         <View style={styles.row}>
-          <IconBadge icon="notifications-outline" size={touch.min} active={settings.notificationsEnabled} />
           <View style={styles.rowText}>
             <Text style={text.bodyStrong}>תזכורת אימון</Text>
             <Text style={text.label}>נשלחת בימי האימון שהגדרת</Text>

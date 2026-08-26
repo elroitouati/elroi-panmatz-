@@ -21,7 +21,14 @@ export default function FitnessScreen() {
 
   if (!state) return null;
   const todayLog = state.logs[todayKey()];
-  const enabled = state.goals.filter((g) => g.enabled).length;
+  const enabledGoals = state.goals.filter((g) => g.enabled);
+  const enabled = enabledGoals.length;
+  const weekday = new Date().getDay();
+
+  // היעד הבא בתור: הפעיל הראשון שמתאמנים בו היום ועדיין לא בוצע.
+  const nextId = enabledGoals.find(
+    (g) => g.trainingDays.includes(weekday) && !todayLog?.goals?.[g.id]?.done
+  )?.id ?? null;
 
   // יעד נמדד פותח הזנת תוצאה; יעד וי מסומן ישירות.
   const handleMarkDone = (goal) => {
@@ -64,6 +71,7 @@ export default function FitnessScreen() {
               key={goal.id}
               goal={goal}
               todayDone={!!todayLog?.goals?.[goal.id]?.done}
+              isNext={goal.id === nextId}
               onToggleEnabled={toggleGoalEnabled}
               onEdit={setEditGoal}
               onBump={bumpGoal}
