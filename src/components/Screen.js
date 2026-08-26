@@ -1,30 +1,34 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, font } from '../theme';
-import LeafMark from './LeafMark';
+import { colors, layout, space } from '../design/tokens';
+import { text } from '../design/typography';
 
-// מעטפת מסך אחידה: רקע כהה, כותרת עם רמז לוגו, וגלילה.
-export default function Screen({ title, subtitle, children, scroll = true, headerRight }) {
+// מעטפת מסך אחידה. הכותרת נשארת בראש, התוכן נגלל מתחתיה.
+// הריפוד התחתון מפנה מקום לפס הניווט הצף.
+export default function Screen({ title, subtitle, children, action }) {
   const insets = useSafeAreaInsets();
-  const Container = scroll ? ScrollView : View;
-  const containerProps = scroll
-    ? {
-        contentContainerStyle: { padding: spacing.lg, paddingBottom: 120 },
-        showsVerticalScrollIndicator: false,
-      }
-    : { style: { flex: 1, padding: spacing.lg } };
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          <Text style={text.title} numberOfLines={1}>{title}</Text>
+          {subtitle ? (
+            <Text style={[text.labelStrong, styles.subtitle]} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
         </View>
-        {headerRight ? headerRight : <LeafMark size={24} />}
+        {action}
       </View>
-      <Container {...containerProps}>{children}</Container>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {children}
+      </ScrollView>
     </View>
   );
 }
@@ -32,14 +36,19 @@ export default function Screen({ title, subtitle, children, scroll = true, heade
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    gap: space[3],
+    paddingHorizontal: layout.gutter,
+    paddingTop: space[3],
+    paddingBottom: space[4],
   },
   headerText: { flex: 1 },
-  title: { color: colors.cream, fontSize: font.h1, fontWeight: '900', textAlign: 'right', letterSpacing: -0.5 },
-  subtitle: { color: colors.creamDim, fontSize: font.small, textAlign: 'right', marginTop: 2 },
+  subtitle: { marginTop: 2 },
+  content: {
+    paddingHorizontal: layout.gutter,
+    paddingBottom: 128,     // פינוי לפס הניווט הצף
+    gap: layout.cardGap,
+  },
 });

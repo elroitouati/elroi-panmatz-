@@ -1,18 +1,24 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { colors, radius } from '../theme';
+import { colors, radius } from '../design/tokens';
 
-// פס התקדמות אופקי. RTL: המילוי מתחיל מימין.
-export default function ProgressBar({ progress = 0, color = colors.gold, height = 10, track = colors.bgDeep }) {
-  const pct = Math.max(0, Math.min(1, progress)) * 100;
+// פס התקדמות. alignItems: 'flex-start' תחת RTL מצמיד את המילוי לימין,
+// כך שהפס מתמלא מתחילת השורה כמו שהעין העברית מצפה.
+export default function ProgressBar({ progress = 0, height = 6, color = colors.accent, label }) {
+  const pct = Math.max(0, Math.min(1, progress));
   return (
-    <View style={[styles.track, { height, backgroundColor: track, borderRadius: height }]}>
+    <View
+      style={[styles.track, { height, borderRadius: radius.pill }]}
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}
+    >
       <View
         style={{
-          width: `${pct}%`,
+          width: `${pct * 100}%`,
           height: '100%',
           backgroundColor: color,
-          borderRadius: height,
+          borderRadius: radius.pill,
         }}
       />
     </View>
@@ -22,6 +28,8 @@ export default function ProgressBar({ progress = 0, color = colors.gold, height 
 const styles = StyleSheet.create({
   track: {
     width: '100%',
+    backgroundColor: colors.bgSunken,
     overflow: 'hidden',
+    alignItems: 'flex-start',
   },
 });

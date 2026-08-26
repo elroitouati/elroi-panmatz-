@@ -1,32 +1,51 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, spacing, font, shadow } from '../theme';
-import IconBadge from './IconBadge';
+import { Ionicons } from '@expo/vector-icons';
+import Tile from './Tile';
+import Num from './Num';
+import { colors, space, type } from '../design/tokens';
+import { text } from '../design/typography';
 
-// אריח סטטיסטיקה קומפקטי: תג-אייקון + מספר גדול + תווית — לשורות סיכום מהירות.
-export default function StatTile({ icon, value, label, emphasis }) {
+// ============================================================================
+//  StatTile — אריח סטטיסטיקה בבנטו.
+//  התווית קטנה ועמומה *מעל*, המספר גדול מתחתיה. זה הסדר הנכון:
+//  הערך הוא מה שבאים בשבילו, לא השם שלו. ההיפוך (שם גדול, מספר קטן)
+//  הוא ההבדל הבולט ביותר בין דשבורד חובבני למקצועי.
+//  גובה מינימלי קבוע — אחרת הרשת מתגלית כשהתוכן באורך שונה.
+// ============================================================================
+
+export default function StatTile({ label, value, unit, icon, accent = false }) {
+  const valueColor = accent ? colors.accent : colors.text1;
+
   return (
-    <View style={styles.tile}>
-      <IconBadge icon={icon} size={36} iconSize={17} active={emphasis} />
-      <Text style={[styles.value, emphasis && { color: colors.gold }]} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
-      <Text style={styles.label} numberOfLines={1}>{label}</Text>
-    </View>
+    <Tile accent={accent} style={styles.tile}>
+      <View style={styles.head}>
+        <Text style={text.label} numberOfLines={1}>{label}</Text>
+        {icon ? (
+          <Ionicons
+            name={icon}
+            size={16}
+            color={accent ? colors.accent : colors.text3}
+          />
+        ) : null}
+      </View>
+      <Num value={value} unit={unit} size="statSm" color={valueColor} style={styles.num} />
+    </Tile>
   );
 }
 
 const styles = StyleSheet.create({
   tile: {
     flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.sm,
-    alignItems: 'center',
-    gap: 6,
-    ...shadow.soft,
+    minHeight: 96,           // קבוע — שומר על רשת ישרה
+    justifyContent: 'space-between',
   },
-  value: { color: colors.cream, fontSize: font.h2, fontWeight: '900' },
-  label: { color: colors.creamDim, fontSize: font.tiny, textAlign: 'center' },
+  // 'row' מתהפך תחת RTL: התווית מימין, האייקון בפינה הנגדית.
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[2],
+  },
+  num: { marginTop: space[2] },
 });
