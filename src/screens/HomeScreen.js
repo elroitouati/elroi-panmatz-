@@ -1,220 +1,153 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
-import Tile from '../components/Tile';
-import StatTile from '../components/StatTile';
-import StageMap from '../components/StageMap';
-import Num from '../components/Num';
-import IconBadge from '../components/IconBadge';
-import ProgressBar from '../components/ProgressBar';
+import Ring from '../components/Ring';
+import StagePath from '../components/StagePath';
+import CheckCircle from '../components/CheckCircle';
+import IconButton from '../components/IconButton';
 import EmptyState from '../components/EmptyState';
-import { colors, space, radius, touch } from '../design/tokens';
+import { Section, Row } from '../components/Group';
+import { colors, radius, space, type } from '../design/tokens';
 import { text } from '../design/typography';
+import { ltr } from '../design/rtl';
+import { haptic } from '../design/haptics';
 import { useApp } from '../context/AppContext';
 import { currentStageIndex, stageCountdown } from '../utils/stages';
-import { todayKey } from '../utils/date';
-import { formatValue, unitLabel, goalProgress, categoryIcon, computeStreak } from '../utils/fitness';
+import { todayKey, HEB_WEEKDAYS_FULL, HEB_MONTHS } from '../utils/date';
+import { formatValue, unitLabel, computeStreak } from '../utils/fitness';
+
+// ============================================================================
+//  היום. שאלה אחת: מה עושים היום, וכמה נשאר עד השלב הבא.
+//  הטבעת היא הגיבור; הרשימה מתחת היא הפעולה.
+// ============================================================================
+
+function todayOverline() {
+  const d = new Date();
+  return `יום ${HEB_WEEKDAYS_FULL[d.getDay()]}, ${d.getDate()} ב${HEB_MONTHS[d.getMonth()]}`;
+}
 
 export default function HomeScreen({ navigation }) {
   const { state, markGoalToday, unmarkGoalToday } = useApp();
   if (!state) return null;
 
-  const curStage = state.stages[currentStageIndex(state.stages)];
-  const countdown = stageCountdown(curStage);
+  const stage = state.stages[currentStageIndex(state.stages)];
+  const countdown = stageCountdown(stage);
   const todayLog = state.logs[todayKey()];
   const weekday = new Date().getDay();
 
   const enabledGoals = state.goals.filter((g) => g.enabled);
-  const todaysGoals = enabledGoals.filter((g) => g.trainingDays.includes(weekday));
-  const doneCount = todaysGoals.filter((g) => todayLog?.goals?.[g.id]?.done).length;
+  const todays = enabledGoals.filter((g) => g.trainingDays.includes(weekday));
+  const doneCount = todays.filter((g) => todayLog?.goals?.[g.id]?.done).length;
   const streak = computeStreak(enabledGoals, state.logs);
 
-  // אריח הדגש היחיד ברשת: יעד הפוקוס, ואם אין — הראשון שעדיין לא בוצע.
-  const accentId =
-    todaysGoals.find((g) => g.emphasis && !todayLog?.goals?.[g.id]?.done)?.id ??
-    todaysGoals.find((g) => !todayLog?.goals?.[g.id]?.done)?.id ??
-    null;
+  const countdownBig = countdown.hasDate && /^\d+$/.test(countdown.big)
+    ? `${countdown.big} ימים`
+    : countdown.big;
 
-  const settingsBtn = (
-    <Pressable
-      onPress={() => navigation.navigate('Settings')}
-      accessibilityRole="button"
-      accessibilityLabel="הגדרות"
-      hitSlop={12}
-      style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-    >
-      <Ionicons name="settings-outline" size={20} color={colors.text2} />
-    </Pressable>
-  );
+  const toggle = (goal, done) => {
+    if (done) { unmarkGoalToday(goal.id); return; }
+    haptic.light();
+    markGoalToday(goal.id, goal.tracking === 'measured' ? goal.current : null);
+  };
 
   return (
     <Screen
-      title="אלרואי | פנמ״צ"
-      subtitle="ההכנה שלך לפנימייה הצבאית לפיקוד"
-      action={settingsBtn}
+      title="היום"
+      overline={todayOverline()}
+      action={<IconButton icon="settings-outline" label="הגדרות" onPress={() => navigation.navigate('Settings')} />}
     >
-      {/* ---- מסלול הקבלה: הספירה והמפה, יחידה אחת בראש המסך ---- */}
-      <Tile accent style={styles.hero}>
-        <Text style={text.label}>השלב הנוכחי</Text>
-        <Text style={[text.bodyStrong, styles.stageName]} numberOfLines={1}>
-          {curStage.name}
-        </Text>
-
-        <View style={styles.heroNumber}>
-          {countdown.hasDate && /^\d+$/.test(countdown.big) ? (
-            <Num value={countdown.big} unit="ימים" size="stat" />
+      {/* ---- גיבור: טבעת יעדי היום + השלב הבא ---- */}
+      <View style={styles.hero}>
+        <Ring progress={todays.length ? doneCount / todays.length : 0} size={124} stroke={11}>
+          {todays.length ? (
+            <View style={styles.ringNum} accessibilityLabel={`${doneCount} מתוך ${todays.length} יעדים בוצעו`}>
+              <Text style={styles.ringBig}>{ltr(doneCount)}</Text>
+              <Text style={styles.ringSmall}>{ltr(`/${todays.length}`)}</Text>
+            </View>
           ) : (
-            <Text style={[text.title, styles.heroText]} numberOfLines={1}>
-              {countdown.big}
-            </Text>
+            <Ionicons name="moon" size={30} color={colors.ink2} />
           )}
-          <Text style={[text.label, styles.heroCaption]}>{countdown.small}</Text>
-        </View>
+          <Text style={[text.caption, styles.ringLabel]}>{todays.length ? 'יעדי היום' : 'מנוחה'}</Text>
+        </Ring>
 
-        <View style={styles.mapWrap}>
-          <StageMap stages={state.stages} />
+        <View style={styles.side}>
+          <Text style={text.caption} numberOfLines={1}>השלב הבא · {stage.name}</Text>
+          <Text style={styles.countdown} numberOfLines={2}>
+            {ltr(countdownBig)}
+          </Text>
+          <Text style={text.sub} numberOfLines={2}>{countdown.small}</Text>
+          <View style={styles.pill}>
+            <Ionicons name="flame" size={14} color={colors.gold} />
+            <Text style={[text.captionStrong]}>
+              רצף {ltr(streak)} {streak === 1 ? 'יום' : 'ימים'}
+            </Text>
+          </View>
         </View>
-      </Tile>
-
-      {/* ---- יעדי היום ---- */}
-      <View style={styles.sectionHead}>
-        <Text style={text.bodyStrong}>יעדי היום</Text>
-        <Pressable
-          onPress={() => navigation.navigate('כושר')}
-          accessibilityRole="button"
-          accessibilityLabel="מעבר לכל היעדים"
-          hitSlop={8}
-        >
-          <Text style={[text.label, styles.link]}>לכל היעדים</Text>
-        </Pressable>
       </View>
 
-      {todaysGoals.length === 0 ? (
-        <Tile>
-          <EmptyState
-            icon="moon-outline"
-            title="היום יום מנוחה"
-            body="לא הוגדר אימון להיום. התאוששות היא חלק מהתוכנית — נחזור מחר."
-            actionLabel="שינוי ימי האימון"
-            onAction={() => navigation.navigate('כושר')}
-          />
-        </Tile>
+      {/* ---- מסלול הקבלה ---- */}
+      <Text style={[text.caption, styles.header]}>מסלול הקבלה</Text>
+      <View style={styles.pathCard}>
+        <StagePath stages={state.stages} />
+      </View>
+
+      {/* ---- האימון של היום ---- */}
+      {todays.length === 0 ? (
+        <>
+          <Text style={[text.caption, styles.header]}>האימון של היום</Text>
+          <View style={styles.pathCard}>
+            <EmptyState
+              icon="moon-outline"
+              title="היום יום מנוחה"
+              body="התאוששות היא חלק מהתוכנית. נחזור מחר."
+              actionLabel="שינוי ימי האימון"
+              onAction={() => navigation.navigate('כושר')}
+            />
+          </View>
+        </>
       ) : (
-        <View style={styles.goalList}>
-          {todaysGoals.map((goal) => {
+        <Section
+          title="האימון של היום"
+          footer="לחיצה על שורה מסמנת ביצוע. ביעד עם מספרים נרשם היעד היומי — את התוצאה המדויקת רושמים במסך כושר."
+        >
+          {todays.map((goal) => {
             const done = !!todayLog?.goals?.[goal.id]?.done;
             const measured = goal.tracking === 'measured';
             return (
-              <Tile
+              <Row
                 key={goal.id}
-                accent={goal.id === accentId}
-                style={styles.goalRow}
-                onPress={() =>
-                  done
-                    ? unmarkGoalToday(goal.id)
-                    : markGoalToday(goal.id, measured ? goal.current : null)
-                }
-                accessibilityLabel={`${goal.name}${done ? ', בוצע' : ', לא בוצע'}`}
-              >
-                <View style={styles.goalTop}>
-                  <IconBadge
-                    icon={categoryIcon(goal.category)}
-                    size={touch.min}
-                    active={done}
-                  />
-                  <Text style={[text.bodyStrong, styles.goalName]} numberOfLines={1}>
-                    {goal.name}
-                  </Text>
-                  <Ionicons
-                    name={done ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={22}
-                    color={done ? colors.accent : colors.text3}
-                  />
-                </View>
-
-                {measured ? (
-                  <View style={styles.goalBottom}>
-                    <View style={styles.goalBar}>
-                      <ProgressBar
-                        progress={goalProgress(goal)}
-                        label={`התקדמות ב${goal.name}`}
-                        height={4}
-                      />
-                    </View>
-                    <Num
-                      value={formatValue(goal, goal.current)}
-                      unit={unitLabel(goal)}
-                      size="statSm"
-                      color={done ? colors.text2 : colors.text1}
-                    />
-                  </View>
-                ) : null}
-              </Tile>
+                title={goal.name}
+                subtitle={measured ? null : 'סימון בלבד'}
+                value={measured ? `${ltr(formatValue(goal, goal.current))} ${unitLabel(goal)}` : null}
+                leading={(pressed) => <CheckCircle done={done} pressed={pressed} />}
+                onPress={() => toggle(goal, done)}
+                accessibilityLabel={`${goal.name}, ${done ? 'בוצע' : 'לא בוצע'}`}
+              />
             );
           })}
-        </View>
+        </Section>
       )}
-
-      {/* ---- מדדים ---- */}
-      <View style={styles.bento}>
-        <StatTile
-          label="רצף נוכחי"
-          value={streak}
-          unit={streak === 1 ? 'יום' : 'ימים'}
-          icon="flame-outline"
-          accent
-        />
-        <StatTile
-          label="בוצעו היום"
-          value={`${doneCount}/${todaysGoals.length}`}
-          icon="checkmark-done-outline"
-        />
-      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  iconBtn: {
-    width: touch.min,
-    height: touch.min,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  hero: {
+    flexDirection: 'row', alignItems: 'center', gap: space[5],
+    backgroundColor: colors.group, borderRadius: radius.card, padding: space[5],
   },
-  iconBtnPressed: { backgroundColor: colors.surface3 },
-
-  hero: { paddingBottom: space[5] },
-  stageName: { marginTop: 2 },
-  heroNumber: { alignItems: 'center', marginTop: space[5] },
-  heroText: { color: colors.accent, textAlign: 'center' },
-  heroCaption: { marginTop: space[1], textAlign: 'center' },
-  mapWrap: {
-    marginTop: space[6],
-    paddingTop: space[5],
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  ringNum: { flexDirection: 'row', alignItems: 'baseline', direction: 'ltr' },
+  ringBig: { fontFamily: type.family.heavy, fontSize: type.ring[0], lineHeight: type.ring[1], color: colors.ink, includeFontPadding: false, ...type.tabular },
+  ringSmall: { fontFamily: type.family.bold, fontSize: 18, color: colors.ink, opacity: type.unitOpacity, includeFontPadding: false, ...type.tabular },
+  ringLabel: { textAlign: 'center' },
+  side: { flex: 1, minWidth: 0, gap: 3 },
+  countdown: { fontFamily: type.family.heavy, fontSize: 26, lineHeight: 32, color: colors.gold, textAlign: 'right', includeFontPadding: false },
+  pill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    backgroundColor: colors.goldSoft, borderRadius: radius.pill,
+    paddingHorizontal: space[3], paddingVertical: 5, marginTop: space[2],
   },
-
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: space[4],
-  },
-  link: { color: colors.accent },
-
-  // רשת בנטו לאריחי המדדים: תווית קצרה ומספר, שני אריחים בשורה.
-  bento: { flexDirection: 'row', gap: space[3] },
-
-  // יעדי היום הם רשימה ולא בנטו: שם יעד בעברית לא נכנס לחצי רוחב
-  // בלי להיחתך, וקריאוּת השם חשובה כאן יותר מסימטריית הרשת.
-  goalList: { gap: space[3] },
-  goalRow: { gap: space[3] },
-  goalTop: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  goalName: { flex: 1 },
-  goalBottom: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  goalBar: { flex: 1 },
+  header: { paddingHorizontal: space[4], paddingTop: space[6], paddingBottom: 7 },
+  pathCard: { backgroundColor: colors.group, borderRadius: radius.card, paddingVertical: space[4], paddingHorizontal: space[2] },
 });

@@ -1,129 +1,98 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
+import { View, Text, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
-import Tile from '../components/Tile';
-import Num from '../components/Num';
+import Ring from '../components/Ring';
 import Button from '../components/Button';
-import ProgressBar from '../components/ProgressBar';
-import IconBadge from '../components/IconBadge';
-import { colors, space, radius, touch, state as st } from '../design/tokens';
+import Stepper from '../components/Stepper';
+import { Section, Row } from '../components/Group';
+import { colors, radius, space, type } from '../design/tokens';
 import { text } from '../design/typography';
+import { ltr } from '../design/rtl';
+import { haptic } from '../design/haptics';
 import { useApp } from '../context/AppContext';
 import { todayKey, isInThisWeek } from '../utils/date';
+
+// ============================================================================
+//  פסיכוטכני. אותה שפה כמו "היום": טבעת שבועית, פעולה אחת, ורשימת אתרים.
+// ============================================================================
 
 export default function PsychScreen() {
   const { state, markPsychToday, unmarkPsychToday, setPsychWeeklyTarget } = useApp();
   if (!state) return null;
 
   const doneToday = state.psych.practiceDays.includes(todayKey());
-  const weekCount = state.psych.practiceDays.filter(isInThisWeek).length;
+  const week = state.psych.practiceDays.filter(isInThisWeek).length;
   const target = state.psych.weeklyTarget;
 
-  const openLink = (url) => Linking.openURL(url).catch(() => {});
+  const toggle = () => {
+    if (doneToday) { unmarkPsychToday(); return; }
+    haptic.light();
+    markPsychToday();
+  };
 
   return (
-    <Screen title="פסיכוטכני" subtitle="הכנה קוגניטיבית">
-      {/* יעד שבועי — המספר הוא הגיבור, התווית מעליו */}
-      <Tile accent style={styles.hero}>
-        <View style={styles.headRow}>
-          <Text style={text.label}>תרגולים השבוע</Text>
-          <View style={styles.stepper}>
-            <Step
-              icon="remove"
-              label="הפחתת היעד השבועי"
-              onPress={() => setPsychWeeklyTarget(target - 1)}
-              disabled={target <= 1}
-            />
-            <Text style={[text.labelStrong, styles.targetNum]}>{target}</Text>
-            <Step
-              icon="add"
-              label="הגדלת היעד השבועי"
-              onPress={() => setPsychWeeklyTarget(target + 1)}
+    <Screen title="פסיכוטכני" overline="הכנה קוגניטיבית">
+      <View style={styles.hero}>
+        <Ring progress={target ? week / target : 0} size={124} stroke={11}>
+          <View style={styles.ringNum} accessibilityLabel={`${week} מתוך ${target} תרגולים השבוע`}>
+            <Text style={styles.ringBig}>{ltr(week)}</Text>
+            <Text style={styles.ringSmall}>{ltr(`/${target}`)}</Text>
+          </View>
+          <Text style={[text.caption, styles.center]}>השבוע</Text>
+        </Ring>
+
+        <View style={styles.side}>
+          <Text style={text.caption}>יעד שבועי</Text>
+          <View style={styles.targetRow}>
+            <Text style={[text.title, styles.flex]} numberOfLines={1}>{ltr(target)} תרגולים</Text>
+            <Stepper
+              size="sm"
+              onPlus={() => setPsychWeeklyTarget(target + 1)}
+              onMinus={() => setPsychWeeklyTarget(target - 1)}
+              minusDisabled={target <= 1}
+              plusLabel="הגדלת היעד השבועי"
+              minusLabel="הפחתת היעד השבועי"
             />
           </View>
+          <Button
+            label={doneToday ? 'תרגלת היום' : 'תרגלתי היום'}
+            icon={doneToday ? 'checkmark' : undefined}
+            variant={doneToday ? 'done' : 'primary'}
+            onPress={toggle}
+            accessibilityHint={doneToday ? 'לחיצה מבטלת את הסימון' : undefined}
+            wrapStyle={styles.cta}
+          />
         </View>
-
-        <Num value={weekCount} unit={`מתוך ${target}`} size="stat" style={styles.num} />
-
-        <ProgressBar
-          progress={target === 0 ? 0 : weekCount / target}
-          label="התקדמות שבועית בתרגול"
-          height={8}
-        />
-
-        <Button
-          label={doneToday ? 'תרגלת היום' : 'תרגלתי היום'}
-          icon={doneToday ? 'checkmark' : undefined}
-          variant={doneToday ? 'secondary' : 'primary'}
-          onPress={() => (doneToday ? unmarkPsychToday() : markPsychToday())}
-          style={styles.cta}
-        />
-      </Tile>
-
-      <Text style={[text.bodyStrong, styles.sectionTitle]}>אתרי תרגול</Text>
-      <Text style={text.label}>
-        סדרות, צורות, לוגיקה וזריזות. הקישורים נפתחים בדפדפן.
-      </Text>
-
-      <View style={styles.list}>
-        {state.psych.links.map((link) => (
-          <Tile
-            key={link.id}
-            onPress={() => openLink(link.url)}
-            accessibilityLabel={`${link.title} — נפתח בדפדפן`}
-            style={styles.linkTile}
-          >
-            <IconBadge icon="school-outline" size={touch.min} />
-            <View style={styles.linkText}>
-              <Text style={text.bodyStrong} numberOfLines={2}>{link.title}</Text>
-              <Text style={text.label} numberOfLines={1}>{link.subtitle}</Text>
-            </View>
-            <Ionicons name="open-outline" size={18} color={colors.text3} />
-          </Tile>
-        ))}
       </View>
+
+      <Section title="אתרי תרגול" footer="הקישורים נפתחים בדפדפן.">
+        {state.psych.links.map((link) => (
+          <Row
+            key={link.id}
+            title={link.title}
+            subtitle={link.subtitle}
+            onPress={() => Linking.openURL(link.url).catch(() => {})}
+            accessibilityLabel={`${link.title} — נפתח בדפדפן`}
+            trailing={<Ionicons name="open-outline" size={18} color={colors.ink3} />}
+          />
+        ))}
+      </Section>
     </Screen>
   );
 }
 
-function Step({ icon, label, onPress, disabled }) {
-  return (
-    <Pressable
-      onPress={disabled ? undefined : onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: !!disabled }}
-      hitSlop={8}
-      style={({ pressed }) => [
-        styles.step,
-        pressed && !disabled && styles.stepPressed,
-        disabled && { opacity: st.disabledOpacity },
-      ]}
-    >
-      <Ionicons name={icon} size={16} color={colors.text1} />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  hero: { gap: space[4] },
-  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  step: {
-    width: 32, height: 32, borderRadius: radius.sm,
-    backgroundColor: colors.surface1,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
+  hero: {
+    flexDirection: 'row', alignItems: 'center', gap: space[5],
+    backgroundColor: colors.group, borderRadius: radius.card, padding: space[5],
   },
-  stepPressed: { backgroundColor: colors.surface3 },
-  targetNum: { minWidth: 20, textAlign: 'center' },
-  num: { justifyContent: 'flex-start' },
-  cta: { marginTop: space[1] },
-
-  sectionTitle: { marginTop: space[4] },
-  list: { gap: space[3] },
-  linkTile: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  linkText: { flex: 1, gap: 2 },
+  ringNum: { flexDirection: 'row', alignItems: 'baseline', direction: 'ltr' },
+  ringBig: { fontFamily: type.family.heavy, fontSize: type.ring[0], lineHeight: type.ring[1], color: colors.ink, includeFontPadding: false, ...type.tabular },
+  ringSmall: { fontFamily: type.family.bold, fontSize: 18, color: colors.ink, opacity: type.unitOpacity, includeFontPadding: false, ...type.tabular },
+  center: { textAlign: 'center' },
+  side: { flex: 1, minWidth: 0, gap: 4 },
+  targetRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  flex: { flex: 1 },
+  cta: { marginTop: space[3] },
 });
