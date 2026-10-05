@@ -58,7 +58,7 @@ export default function TabBar({ state, navigation }) {
 
 const styles = StyleSheet.create({
   bar: { position: 'absolute', start: 0, end: 0, bottom: 0, flexDirection: 'row', paddingTop: space[2] },
-  tint: { backgroundColor: Platform.OS === 'ios' ? colors.barTint : 'rgba(47,58,32,0.97)' },
+  tint: { backgroundColor: Platform.OS === 'ios' ? colors.barTint : colors.bgDeep },
   hairline: { position: 'absolute', top: 0, start: 0, end: 0, height: StyleSheet.hairlineWidth, backgroundColor: colors.separator },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, minHeight: 48 },
   label: { fontFamily: type.family.medium, fontSize: type.tab[0], lineHeight: type.tab[1], letterSpacing: 0, includeFontPadding: false },

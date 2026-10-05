@@ -19,6 +19,7 @@ const AppContext = createContext(null);
 
 function freshState() {
   return {
+    startedAt: todayKey(), // היום הראשון באפליקציה — לפניו אין "פספוס"
     stages: DEFAULT_STAGES.map((s) => ({ ...s })),
     goals: DEFAULT_GOALS.map((g) => ({ ...g, trainingDays: [...g.trainingDays], history: [] })),
     logs: {}, // { 'YYYY-MM-DD': { trained, goals: { id: {done, value} } } }
@@ -39,7 +40,10 @@ function freshState() {
 function normalize(loaded) {
   const base = freshState();
   if (!loaded) return base;
+  // משתמש קיים בלי startedAt: היום המוקדם ביותר שיש עליו נתונים
+  const known = [...Object.keys(loaded.logs || {}), ...(loaded.psych?.practiceDays || [])].sort();
   return {
+    startedAt: loaded.startedAt || known[0] || base.startedAt,
     stages: Array.isArray(loaded.stages) && loaded.stages.length ? loaded.stages : base.stages,
     goals: Array.isArray(loaded.goals) && loaded.goals.length ? loaded.goals : base.goals,
     logs: loaded.logs || {},

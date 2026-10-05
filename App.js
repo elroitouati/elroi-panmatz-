@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { I18nManager, StyleSheet, LogBox } from 'react-native';
+import { I18nManager, StyleSheet, LogBox, Platform } from 'react-native';
+import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -34,6 +35,13 @@ I18nManager.forceRTL(true);
 
 LogBox.ignoreLogs(['new NativeEventEmitter']);
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// סרגל הניווט של אנדרואיד (סמסונג: ||| ○ <) — באותו צבע כמו סרגל הטאבים,
+// עם כפתורים בהירים, כך שהתחתית נראית כחלק אחד מהאפליקציה.
+if (Platform.OS === 'android') {
+  NavigationBar.setBackgroundColorAsync(colors.bgDeep).catch(() => {});
+  NavigationBar.setButtonStyleAsync('light').catch(() => {});
+}
 
 const Tab = createBottomTabNavigator();
 const RootStack = createNativeStackNavigator();

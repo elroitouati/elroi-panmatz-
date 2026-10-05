@@ -26,6 +26,7 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(now.getMonth());
 
   const today = todayKey();
+  const startedAt = state?.startedAt || '0000-00-00';
   const weeks = useMemo(() => buildMonthGrid(year, month), [year, month]);
   const enabledGoals = state ? state.goals.filter((g) => g.enabled) : [];
 
@@ -36,7 +37,7 @@ export default function CalendarScreen() {
       if (!key) return;
       const trained = state.logs[key]?.trained;
       if (trained) workouts += 1;
-      if (anyGoalTrainsOn(enabledGoals, keyToDate(key).getDay()) && key <= today) {
+      if (anyGoalTrainsOn(enabledGoals, keyToDate(key).getDay()) && key <= today && key >= startedAt) {
         due += 1;
         if (trained) met += 1;
       }
@@ -85,7 +86,8 @@ export default function CalendarScreen() {
               if (!key) return <View key={di} style={styles.cellWrap} />;
               const d = keyToDate(key);
               const isToday = key === today;
-              const status = classifyDay(enabledGoals, state.logs[key], d.getDay(), key < today, isToday);
+              // לפני היום הראשון באפליקציה אין פספוס — רק מה שסומן
+              const status = classifyDay(enabledGoals, state.logs[key], d.getDay(), key < today && key >= startedAt, isToday);
               const done = status === 'done';
               const missed = status === 'missed';
               const future = key > today;

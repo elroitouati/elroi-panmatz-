@@ -10,7 +10,8 @@ import EmptyState from '../components/EmptyState';
 import { Section, Row } from '../components/Group';
 import { colors, radius, space, type } from '../design/tokens';
 import { text } from '../design/typography';
-import { ltr } from '../design/rtl';
+import { ltr, dir } from '../design/rtl';
+import Fraction from '../components/Fraction';
 import { haptic } from '../design/haptics';
 import { useApp } from '../context/AppContext';
 import { currentStageIndex, stageCountdown } from '../utils/stages';
@@ -42,7 +43,7 @@ export default function HomeScreen({ navigation }) {
   const streak = computeStreak(enabledGoals, state.logs);
 
   const countdownBig = countdown.hasDate && /^\d+$/.test(countdown.big)
-    ? `${countdown.big} ימים`
+    ? `${ltr(countdown.big)} ימים`
     : countdown.big;
 
   const toggle = (goal, done) => {
@@ -59,12 +60,9 @@ export default function HomeScreen({ navigation }) {
     >
       {/* ---- גיבור: טבעת יעדי היום + השלב הבא ---- */}
       <View style={styles.hero}>
-        <Ring progress={todays.length ? doneCount / todays.length : 0} size={124} stroke={11}>
+        <Ring progress={todays.length ? doneCount / todays.length : 0} size={112} stroke={10}>
           {todays.length ? (
-            <View style={styles.ringNum} accessibilityLabel={`${doneCount} מתוך ${todays.length} יעדים בוצעו`}>
-              <Text style={styles.ringBig}>{ltr(doneCount)}</Text>
-              <Text style={styles.ringSmall}>{ltr(`/${todays.length}`)}</Text>
-            </View>
+            <Fraction value={doneCount} total={todays.length} />
           ) : (
             <Ionicons name="moon" size={30} color={colors.ink2} />
           )}
@@ -74,7 +72,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.side}>
           <Text style={text.caption} numberOfLines={1}>השלב הבא · {stage.name}</Text>
           <Text style={styles.countdown} numberOfLines={2}>
-            {ltr(countdownBig)}
+            {countdownBig}
           </Text>
           <Text style={text.sub} numberOfLines={2}>{countdown.small}</Text>
           <View style={styles.pill}>
@@ -134,15 +132,12 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   hero: {
-    flexDirection: 'row', alignItems: 'center', gap: space[5],
-    backgroundColor: colors.group, borderRadius: radius.card, padding: space[5],
+    flexDirection: 'row', alignItems: 'center', gap: space[4],
+    backgroundColor: colors.group, borderRadius: radius.card, padding: space[4],
   },
-  ringNum: { flexDirection: 'row', alignItems: 'baseline', direction: 'ltr' },
-  ringBig: { fontFamily: type.family.heavy, fontSize: type.ring[0], lineHeight: type.ring[1], color: colors.ink, includeFontPadding: false, ...type.tabular },
-  ringSmall: { fontFamily: type.family.bold, fontSize: 18, color: colors.ink, opacity: type.unitOpacity, includeFontPadding: false, ...type.tabular },
   ringLabel: { textAlign: 'center' },
   side: { flex: 1, minWidth: 0, gap: 3 },
-  countdown: { fontFamily: type.family.heavy, fontSize: 26, lineHeight: 32, color: colors.gold, textAlign: 'right', includeFontPadding: false },
+  countdown: { fontFamily: type.family.heavy, fontSize: 22, lineHeight: 28, color: colors.gold, textAlign: dir.start, includeFontPadding: false },
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
     backgroundColor: colors.goldSoft, borderRadius: radius.pill,
