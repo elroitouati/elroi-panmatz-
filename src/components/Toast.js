@@ -1,51 +1,57 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Text, StyleSheet } from 'react-native';
-import { colors, radius, space, motion } from '../design/tokens';
+import React, { useEffect, useState } from 'react';
+import { Text, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withTiming, runOnJS, useReducedMotion,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, radius, space, duration, ease } from '../design/tokens';
 import { text } from '../design/typography';
-import useReducedMotion from '../design/useReducedMotion';
 
-// הודעת חיזוק קצרה. עולה מעל פס הניווט ונעלמת בעצמה.
+// הודעת חיזוק קצרה מעל סרגל הטאבים.
+// נכנסת ב-250ms ויוצאת ב-150ms באותו כיוון (יציאה תמיד מהירה מכניסה).
+// מעבר ולא keyframes: הודעה חדשה באמצע יציאה ממשיכה מהמקום הנוכחי.
 export default function Toast({ message }) {
+  const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
-  const anim = useRef(new Animated.Value(0)).current;
+  const [shown, setShown] = useState(message);
+  const p = useSharedValue(0);
 
   useEffect(() => {
-    if (reduced) { anim.setValue(message ? 1 : 0); return; }
-    Animated.timing(anim, {
-      toValue: message ? 1 : 0,
-      duration: motion.duration.fade,
-      easing: motion.easing.standard,
-      useNativeDriver: true,
-    }).start();
+    if (message) {
+      setShown(message);
+      p.value = reduced ? 1 : withTiming(1, { duration: duration.toastIn, easing: ease.out });
+    } else if (reduced) {
+      p.value = 0; setShown(null);
+    } else {
+      p.value = withTiming(0, { duration: duration.toastOut, easing: ease.out }, (f) => {
+        if (f) runOnJS(setShown)(null);
+      });
+    }
   }, [message, reduced]);
 
-  if (!message) return null;
+  const style = useAnimatedStyle(() => ({
+    opacity: p.value,
+    transform: [{ translateY: (1 - p.value) * 12 }],
+  }));
 
-  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] });
-
+  if (!shown) return null;
   return (
     <Animated.View
-      style={[styles.wrap, { opacity: anim, transform: [{ translateY }] }]}
       pointerEvents="none"
       accessibilityLiveRegion="polite"
+      style={[styles.wrap, { bottom: insets.bottom + 76 }, style]}
     >
-      <Text style={[text.label, styles.text]}>{message}</Text>
+      <Text style={[text.sub, styles.text]}>{shown}</Text>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    position: 'absolute',
-    bottom: 116,
-    alignSelf: 'center',
-    maxWidth: '88%',
-    backgroundColor: colors.surface3,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingVertical: space[3],
-    paddingHorizontal: space[5],
+    position: 'absolute', alignSelf: 'center', maxWidth: '88%',
+    backgroundColor: colors.bgDeep, borderRadius: radius.pill,
+    paddingVertical: space[3], paddingHorizontal: space[5],
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.separator,
   },
-  text: { color: colors.text1, textAlign: 'center' },
+  text: { color: colors.ink, textAlign: 'center' },
 });
