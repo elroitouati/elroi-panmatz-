@@ -1,6 +1,7 @@
 import * as F from './fitness.js';
 import * as S from './stages.js';
 import { todayKey, dayKey, buildMonthGrid } from './date.js';
+import * as R from './reminders.js';
 
 export default function run() {
 let pass = 0, fail = 0;
@@ -85,6 +86,16 @@ t('פברואר מעוברת', () => {
   const days = buildMonthGrid(2028, 1).flat().filter(Boolean).length;
   ok(days === 29, 'קיבלנו ' + days);
 });
+
+console.log('--- שעות תזכורת ---');
+const base = { reminderHour: 18, reminderMinute: 0, reminderByDay: { 5: { hour: 14, minute: 0 }, 4: { hour: 18, minute: 30 } } };
+t('יום בלי שעה מיוחדת = השעה הרגילה', () => ok(R.formatTime(R.reminderFor(base, 0)) === '18:00'));
+t('שישי בשעה מיוחדת', () => ok(R.formatTime(R.reminderFor(base, 5)) === '14:00'));
+t('חמישי עם דקות', () => ok(R.formatTime(R.reminderFor(base, 4)) === '18:30'));
+t('הגדרות ישנות בלי reminderByDay', () => ok(R.formatTime(R.reminderFor({ reminderHour: 7 }, 3)) === '07:00'));
+t('גלישה קדימה אחרי חצות', () => ok(R.formatTime(R.shiftTime({ hour: 23, minute: 45 }, 30)) === '00:15'));
+t('גלישה אחורה לפני חצות', () => ok(R.formatTime(R.shiftTime({ hour: 0, minute: 0 }, -15)) === '23:45'));
+t('שעה מיוחדת מזוהה', () => ok(R.hasCustomTime(base, 5) && !R.hasCustomTime(base, 1)));
 
 console.log('\n' + pass + ' עברו, ' + fail + ' נכשלו');
 return fail === 0;

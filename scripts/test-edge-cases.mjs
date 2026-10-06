@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const dir = mkdtempSync(join(tmpdir(), 'panmatz-'));
-for (const f of ['date.js', 'fitness.js', 'stages.js']) {
+for (const f of ['date.js', 'fitness.js', 'stages.js', 'reminders.js']) {
   const src = readFileSync(join('src/utils', f), 'utf8').replace(/from '\.\/date'/g, "from './date.js'");
   writeFileSync(join(dir, f), src);
 }

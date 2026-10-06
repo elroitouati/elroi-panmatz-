@@ -32,6 +32,7 @@ function freshState() {
       notificationsEnabled: true,
       reminderHour: 18,
       reminderMinute: 0,
+      reminderByDay: {}, // { 5: { hour: 14, minute: 0 } } — שעה מיוחדת ליום מסוים
     },
   };
 }
@@ -91,17 +92,14 @@ export function AppProvider({ children }) {
       state.goals.forEach((g) => {
         if (g.enabled) g.trainingDays.forEach((d) => days.add(d));
       });
-      await scheduleDailyTrainingReminders(
-        [...days],
-        state.settings.reminderHour,
-        state.settings.reminderMinute
-      );
+      await scheduleDailyTrainingReminders([...days], state.settings);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state?.settings.notificationsEnabled,
     state?.settings.reminderHour,
     state?.settings.reminderMinute,
+    JSON.stringify(state?.settings.reminderByDay || {}),
     // חתימה של ימי האימון של יעדים פעילים
     state?.goals.map((g) => (g.enabled ? g.trainingDays.join('') : '')).join('|'),
   ]);
@@ -302,6 +300,16 @@ export function AppProvider({ children }) {
     setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
   };
 
+  // שעת תזכורת ליום מסוים. time=null מחזיר את היום לשעה הרגילה.
+  const setDayReminder = (weekday, time) => {
+    setState((s) => {
+      const byDay = { ...(s.settings.reminderByDay || {}) };
+      if (time) byDay[weekday] = { hour: time.hour, minute: time.minute };
+      else delete byDay[weekday];
+      return { ...s, settings: { ...s.settings, reminderByDay: byDay } };
+    });
+  };
+
   const value = {
     state,
     celebration,
@@ -327,6 +335,7 @@ export function AppProvider({ children }) {
     setPsychWeeklyTarget,
     // הגדרות
     updateSettings,
+    setDayReminder,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

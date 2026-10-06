@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { reminderFor } from './utils/reminders';
 
 // התראות פוש מקומיות בלבד — בלי שרת. כולל תזכורת אימון וחיזוקים על התקדמות.
 
@@ -35,13 +36,15 @@ export async function ensurePermissions() {
   }
 }
 
-// קובע תזכורת אימון יומית חוזרת (שעה קבועה) בימי האימון שנבחרו.
+// קובע תזכורת אימון שבועית חוזרת בכל יום אימון — בשעה של אותו יום
+// (שעה מיוחדת אם הוגדרה, אחרת השעה הרגילה).
 // weekdays: מערך 0=ראשון..6=שבת. expo משתמש ב-1=ראשון..7=שבת בטריגר שבועי.
-export async function scheduleDailyTrainingReminders(weekdays, hour = 18, minute = 0) {
+export async function scheduleDailyTrainingReminders(weekdays, settings) {
   try {
     await cancelTrainingReminders();
     const ids = [];
     for (const wd of weekdays) {
+      const { hour, minute } = reminderFor(settings, wd);
       const id = await Notifications.scheduleNotificationAsync({
         identifier: `train-${wd}`,
         content: {
