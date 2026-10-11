@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { duration, ease } from '../design/tokens';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, layout, space } from '../design/tokens';
 import { text } from '../design/typography';
@@ -26,19 +27,28 @@ export function Section({ title, footer, children, style }) {
 
 export function Row({
   title, subtitle, value, valueStyle, leading, trailing, chevron,
-  onPress, separator, separatorInset, accessibilityLabel, entering, children,
+  onPress, separator, separatorInset, accessibilityLabel, entering, children, muted,
 }) {
+  // muted: שורה שהושלמה מתעמעמת ב-180ms — "זה כבר מאחוריך". מעבר, לא קפיצה.
+  const dim = useSharedValue(muted ? 1 : 0);
+  React.useEffect(() => {
+    dim.value = withTiming(muted ? 1 : 0, { duration: duration.toggle, easing: ease.out });
+  }, [muted]);
+  const mainStyle = useAnimatedStyle(() => ({ opacity: 1 - 0.45 * dim.value }));
+
   const inset = separatorInset ?? (leading ? 58 : layout.gutter);
   const body = (pressed) => (
     <View style={[styles.row, pressed && styles.rowPressed]}>
       {separator ? <View style={[styles.sep, { start: inset }]} /> : null}
       {leading ? (typeof leading === 'function' ? leading(pressed) : leading) : null}
-      <View style={styles.main}>
+      <Animated.View style={[styles.main, mainStyle]}>
         {title ? <Text style={text.headline} numberOfLines={2}>{title}</Text> : null}
         {subtitle ? <Text style={[text.sub, styles.subtitle]} numberOfLines={2}>{subtitle}</Text> : null}
         {children}
-      </View>
-      {value != null ? <Text style={[text.value, valueStyle]} numberOfLines={1}>{value}</Text> : null}
+      </Animated.View>
+      {value != null ? (
+        <Animated.Text style={[text.value, valueStyle, mainStyle]} numberOfLines={1}>{value}</Animated.Text>
+      ) : null}
       {trailing}
       {/* גילוי בעברית מצביע שמאלה — לכיוון ההתקדמות */}
       {chevron ? <Ionicons name="chevron-back" size={18} color={colors.ink3} /> : null}

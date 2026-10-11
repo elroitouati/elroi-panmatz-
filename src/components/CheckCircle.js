@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import Animated, {
-  useSharedValue, useAnimatedStyle, useAnimatedProps, withTiming, withDelay,
+  useSharedValue, useAnimatedStyle, useAnimatedProps, withTiming, withDelay, withSequence, withSpring,
   interpolateColor, useReducedMotion,
 } from 'react-native-reanimated';
 import { colors, duration, ease } from '../design/tokens';
@@ -36,6 +36,19 @@ export default function CheckCircle({ done, pressed }) {
   useEffect(() => {
     s.value = withTiming(pressed ? 0.9 : 1, { duration: duration.press, easing: ease.out });
   }, [pressed]);
+
+  // "פופ" קטן כשמסמנים בוצע: מהכיווץ של הלחיצה ל-1.15 ובחזרה בקפיץ רך.
+  // האצבע נתנה את התנופה, ולכן overshoot קל מוצדק. רק בסימון — לא בביטול,
+  // לא בטעינה. אחרי אפקט הלחיצה, כדי שלא ידרוס אותו באותו פריים.
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    if (!done || reduced) return;
+    s.value = withSequence(
+      withTiming(1.15, { duration: 140, easing: ease.out }),
+      withSpring(1, { duration: 300, dampingRatio: 0.6 }),
+    );
+  }, [done]);
 
   const circle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(d.value, [0, 1], ['transparent', colors.gold]),

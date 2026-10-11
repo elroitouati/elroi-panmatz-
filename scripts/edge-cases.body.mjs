@@ -143,6 +143,15 @@ console.log('--- יומן ---');
   t('שבוע מתחיל בראשון', () => ok(J.weekKeys(T)[0] === '2026-10-04' && J.weekKeys(T)[6] === '2026-10-10'));
 }
 
+console.log('--- אבני דרך ברצף ---');
+t('7 ראשון נחגג', () => ok(J.milestoneCheck(7, null).celebrate === 7));
+t('7 לא נחגג פעמיים', () => ok(J.milestoneCheck(7, 7).celebrate === null));
+t('8 אחרי 7 לא נחגג ושומר 7', () => { const r = J.milestoneCheck(8, 7); ok(r.celebrate === null && r.last === 7); });
+t('14 נחגג', () => ok(J.milestoneCheck(14, 7).celebrate === 14));
+t('שבירת רצף מאפסת', () => { const r = J.milestoneCheck(2, 14); ok(r.celebrate === null && r.last === null); });
+t('אחרי שבירה 7 נחגג שוב', () => ok(J.milestoneCheck(7, J.milestoneCheck(2, 14).last).celebrate === 7));
+t('60 ו-90 הם אבני דרך, 45 לא', () => ok(J.isMilestone(60) && J.isMilestone(90) && !J.isMilestone(45)));
+
 console.log('\n' + pass + ' עברו, ' + fail + ' נכשלו');
 return fail === 0;
 }

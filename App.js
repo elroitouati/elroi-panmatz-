@@ -21,6 +21,7 @@ import { colors } from './src/design/tokens';
 import TabBar from './src/components/TabBar';
 import { SheetHost } from './src/components/Sheet';
 import Celebration from './src/components/Celebration';
+import StreakCelebration from './src/components/StreakCelebration';
 import Toast from './src/components/Toast';
 import AppSkeleton from './src/components/AppSkeleton';
 import HomeScreen from './src/screens/HomeScreen';
@@ -74,7 +75,7 @@ function Tabs() {
 }
 
 function Root() {
-  const { state, celebration, dismissCelebration, toast } = useApp();
+  const { state, celebration, dismissCelebration, toast, streakCelebration, dismissStreakCelebration } = useApp();
 
   // שלד בצורת התוכן במקום ספינר — הממתין רואה מה עומד להגיע.
   if (!state) return <AppSkeleton />;
@@ -96,6 +97,8 @@ function Root() {
       </SheetHost>
       <Toast message={toast} />
       <Celebration goal={celebration} onClose={dismissCelebration} />
+      {/* אם שתי חגיגות באות יחד — קודם היעד, אחר כך הרצף */}
+      <StreakCelebration value={celebration ? null : streakCelebration} onClose={dismissStreakCelebration} />
     </>
   );
 }

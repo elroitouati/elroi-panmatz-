@@ -138,7 +138,8 @@ export default function HomeScreen({ navigation }) {
                   subtitle={measured ? null : 'סימון בלבד'}
                   value={measured ? `${ltr(formatValue(goal, goal.current))} ${unitLabel(goal)}` : null}
                   leading={(pressed) => <CheckCircle done={done} pressed={pressed} />}
-                  onPress={() => toggle(goal, done)}
+                  muted={done}
+                onPress={() => toggle(goal, done)}
                   accessibilityLabel={`${goal.name}, ${done ? 'בוצע' : 'לא בוצע'}`}
                 />
               );

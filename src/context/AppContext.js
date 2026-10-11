@@ -9,6 +9,7 @@ import {
 } from '../data/defaults';
 import { todayKey } from '../utils/date';
 import { reminderDays } from '../utils/weekPlan';
+import { currentStreak, milestoneCheck } from '../utils/journal';
 import { bumpedCurrent, loweredCurrent, atStart, reachedFinal, isNewPersonalBest } from '../utils/fitness';
 import {
   ensurePermissions,
@@ -58,6 +59,7 @@ function normalize(loaded) {
       practiceDays: loaded.psych?.practiceDays || [],
     },
     settings: { ...base.settings, ...(loaded.settings || {}) },
+    lastMilestone: loaded.lastMilestone ?? null, // אבן הדרך האחרונה שנחגגה ברצף
   };
 }
 
@@ -65,6 +67,7 @@ export function AppProvider({ children }) {
   const [state, setState] = useState(null); // null עד שנטען
   const [celebration, setCelebration] = useState(null); // יעד שהגיע ליעד סופי
   const [toast, setToast] = useState(null); // הודעת חיזוק קצרה בתוך האפליקציה
+  const [streakCelebration, setStreakCelebration] = useState(null); // 7 / 14 / 30...
   const loadedRef = useRef(false);
 
   // טעינה ראשונית
@@ -75,6 +78,18 @@ export function AppProvider({ children }) {
       loadedRef.current = true;
     })();
   }, []);
+
+  // אבני דרך ברצף — נבדק כשהיומן או התוכנית משתנים
+  useEffect(() => {
+    if (!state || !loadedRef.current) return;
+    const streak = currentStreak(state.goals, state.weekPlan, state.logs, state.startedAt);
+    const r = milestoneCheck(streak, state.lastMilestone ?? null);
+    if (r.last !== (state.lastMilestone ?? null)) {
+      setState((s) => ({ ...s, lastMilestone: r.last }));
+    }
+    if (r.celebrate) setStreakCelebration(r.celebrate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.logs, state?.weekPlan, state?.startedAt]);
 
   // שמירה בכל שינוי
   useEffect(() => {
@@ -341,6 +356,8 @@ export function AppProvider({ children }) {
     state,
     celebration,
     dismissCelebration: () => setCelebration(null),
+    streakCelebration,
+    dismissStreakCelebration: () => setStreakCelebration(null),
     toast,
     // שלבים
     setStageDate,

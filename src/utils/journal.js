@@ -85,3 +85,18 @@ export function weekKeys(today = todayKey()) {
   for (let i = 0; i < 7; i++) { keys.push(dayKey(d)); d.setDate(d.getDate() + 1); }
   return keys;
 }
+
+// ---------------------------------------------------------------------------
+//  אבני דרך ברצף: 7, 14, 30, ואחר כך כל 30 ימים.
+//  last = אבן הדרך האחרונה שנחגגה (או null). חוגגים כל אבן דרך פעם אחת;
+//  כשהרצף נשבר (יורד מתחת ל-last) מתחילים מחדש.
+// ---------------------------------------------------------------------------
+export function isMilestone(n) {
+  return n === 7 || n === 14 || (n >= 30 && n % 30 === 0);
+}
+
+export function milestoneCheck(streak, last) {
+  const base = last != null && streak < last ? null : last;
+  if (isMilestone(streak) && base !== streak) return { celebrate: streak, last: streak };
+  return { celebrate: null, last: base };
+}
