@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, interpolateColor, useReducedMotion,
 } from 'react-native-reanimated';
-import { colors, duration, ease, type } from '../design/tokens';
+import { colors, duration, ease, type, keep } from '../design/tokens';
 import { ltr } from '../design/rtl';
 
 // ============================================================================
@@ -26,7 +26,7 @@ export default function DayCell({ day, status, isToday, planIcon, onPress, label
 
   useEffect(() => {
     const t = done ? 1 : 0;
-    d.value = reduced ? t : withTiming(t, { duration: duration.toggle, easing: ease.out });
+    d.value = withTiming(t, { duration: duration.toggle, easing: ease.out, ...keep });
   }, [done, reduced]);
 
   const ring = status === 'missed' ? colors.red : isToday ? colors.ink : status === 'excused' ? colors.ink3 : 'transparent';

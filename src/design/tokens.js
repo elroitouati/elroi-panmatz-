@@ -6,7 +6,7 @@
 //  תחושה: אפליקציית אייפון (Emil Kowalski · apple-design / animate-expo).
 // ============================================================================
 
-import { Easing } from 'react-native-reanimated';
+import { Easing, ReduceMotion } from 'react-native-reanimated';
 
 // ---------------------------------------------------------------------------
 //  צבע
@@ -103,3 +103,10 @@ export const spring = {
 };
 
 export const press = { scale: 0.97, scaleSmall: 0.96 };
+
+// הפחתת תנועה = "פחות ועדין יותר", לא אפס (emil).
+// כברירת מחדל Reanimated מכבה *כל* אנימציה כשהמערכת מבקשת להפחית תנועה
+// (בסמסונג: "הסר אנימציות", ולפעמים מצב חיסכון בסוללה) — ואז האפליקציה
+// נראית קפואה. שקיפות, צבע ומילוי שמסבירים שינוי מצב מקבלים `keep`
+// ונשארים; תזוזה, הגדלה וקפיצה נשלטות ידנית לפי useReducedMotion.
+export const keep = { reduceMotion: ReduceMotion.Never };

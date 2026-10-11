@@ -4,7 +4,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, runOnJS, useReducedMotion,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, space, duration, ease } from '../design/tokens';
+import { colors, radius, space, duration, ease, keep } from '../design/tokens';
 import { text } from '../design/typography';
 
 // הודעת חיזוק קצרה מעל סרגל הטאבים.
@@ -19,11 +19,9 @@ export default function Toast({ message }) {
   useEffect(() => {
     if (message) {
       setShown(message);
-      p.value = reduced ? 1 : withTiming(1, { duration: duration.toastIn, easing: ease.out });
-    } else if (reduced) {
-      p.value = 0; setShown(null);
+      p.value = withTiming(1, { duration: duration.toastIn, easing: ease.out, ...keep });
     } else {
-      p.value = withTiming(0, { duration: duration.toastOut, easing: ease.out }, (f) => {
+      p.value = withTiming(0, { duration: duration.toastOut, easing: ease.out, ...keep }, (f) => {
         if (f) runOnJS(setShown)(null);
       });
     }
@@ -31,7 +29,8 @@ export default function Toast({ message }) {
 
   const style = useAnimatedStyle(() => ({
     opacity: p.value,
-    transform: [{ translateY: (1 - p.value) * 12 }],
+    // בהפחתת תנועה: רק שקיפות, בלי תזוזה
+    transform: [{ translateY: reduced ? 0 : (1 - p.value) * 12 }],
   }));
 
   if (!shown) return null;

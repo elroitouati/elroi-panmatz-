@@ -3,10 +3,10 @@ import { Modal, View, Pressable, StyleSheet, KeyboardAvoidingView, Platform, Scr
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, interpolate, Extrapolation,
-  cancelAnimation, runOnJS, useAnimatedReaction, useReducedMotion,
+  cancelAnimation, runOnJS, useAnimatedReaction, useReducedMotion, withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, spring, space } from '../design/tokens';
+import { colors, radius, spring, space, keep } from '../design/tokens';
 import { haptic } from '../design/haptics';
 
 // ============================================================================
@@ -54,6 +54,7 @@ export default function Sheet({ visible, onClose, children, scroll }) {
   const height = useSharedValue(700);
   const y = useSharedValue(9999);        // פיקסלים מהמצב הפתוח
   const start = useSharedValue(0);
+  const fade = useSharedValue(1);        // בהפחתת תנועה: העמעמה במקום החלקה
   const opened = useRef(false);
   const closingByGesture = useRef(false);
 
@@ -73,7 +74,10 @@ export default function Sheet({ visible, onClose, children, scroll }) {
     if (visible) { setMounted(true); return; }
     if (!mounted) return;
     if (closingByGesture.current) return;          // הגרירה כבר מנפישה את הסגירה
-    if (reduced) { y.value = height.value; finishClose(); return; }
+    if (reduced) {
+      fade.value = withTiming(0, { duration: 150, ...keep }, (f) => { if (f) runOnJS(finishClose)(); });
+      return;
+    }
     y.value = withSpring(height.value, spring.sheetClose, (f) => { if (f) runOnJS(finishClose)(); });
   }, [visible]);
 
@@ -83,7 +87,13 @@ export default function Sheet({ visible, onClose, children, scroll }) {
       opened.current = true;
       y.value = height.value;
       // נפתח בלחיצה — אין מומנטום של אצבע, ולכן אין קפיצה (dampingRatio 1)
-      y.value = reduced ? 0 : withSpring(0, spring.sheetOpen);
+      if (reduced) {
+        y.value = 0; fade.value = 0;
+        fade.value = withTiming(1, { duration: 200, ...keep });
+      } else {
+        fade.value = 1;
+        y.value = withSpring(0, spring.sheetOpen);
+      }
     }
   };
 
@@ -110,9 +120,9 @@ export default function Sheet({ visible, onClose, children, scroll }) {
 
   function markGesture() { closingByGesture.current = true; }
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  const sheetStyle = useAnimatedStyle(() => ({ opacity: fade.value, transform: [{ translateY: y.value }] }));
   const scrimStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(y.value, [0, height.value], [1, 0], Extrapolation.CLAMP),
+    opacity: fade.value * interpolate(y.value, [0, height.value], [1, 0], Extrapolation.CLAMP),
   }));
 
   if (!mounted) return null;

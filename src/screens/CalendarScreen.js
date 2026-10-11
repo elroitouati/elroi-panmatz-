@@ -8,7 +8,7 @@ import DayCell from '../components/DayCell';
 import Reveal from '../components/Reveal';
 import { Section, Row } from '../components/Group';
 import DaySheet from '../sheets/DaySheet';
-import { colors, radius, space, ease } from '../design/tokens';
+import { colors, radius, space, ease, keep } from '../design/tokens';
 import { text } from '../design/typography';
 import { ltr } from '../design/rtl';
 import { haptic } from '../design/haptics';
@@ -62,7 +62,7 @@ export default function CalendarScreen() {
     // בעברית "הבא" שמאלה: החודש הבא נכנס משמאל, הקודם מימין
     const cfg = { duration: 200, easing: ease.out };
     go.value = 0;
-    go.value = withTiming(1, cfg);
+    go.value = withTiming(1, { ...cfg, ...keep }); // ההחלפה נשארת כהעמעמה גם בהפחתת תנועה
     if (!reduced) {
       gx.value = delta > 0 ? -16 : 16;
       gx.value = withTiming(0, cfg);

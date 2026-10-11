@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, useReducedMotion } from 'react-native-reanimated';
-import { colors, radius, duration, ease } from '../design/tokens';
+import { colors, radius, duration, ease, keep } from '../design/tokens';
 
 // פס התקדמות שמתמלא מהתחלת השורה (ימין ב-RTL).
 // המילוי ממוקם absolute ובלי ילדים — זה המקרה היחיד שבו מותר להנפיש רוחב
@@ -11,7 +11,7 @@ export default function ProgressBar({ progress = 0, height = 6, label }) {
   const p = useSharedValue(0);
   useEffect(() => {
     const t = Math.max(0, Math.min(1, progress));
-    p.value = reduced ? t : withTiming(t, { duration: 250, easing: ease.inOut });
+    p.value = withTiming(t, { duration: 250, easing: ease.inOut, ...keep });
   }, [progress, reduced]);
   const fill = useAnimatedStyle(() => ({ width: `${p.value * 100}%` }));
 

@@ -4,7 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   useSharedValue, useAnimatedProps, withTiming, useReducedMotion,
 } from 'react-native-reanimated';
-import { colors, duration, ease } from '../design/tokens';
+import { colors, duration, ease, keep } from '../design/tokens';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -23,7 +23,8 @@ export default function Ring({ progress = 0, size = 132, stroke = 12, children }
 
   useEffect(() => {
     const target = Math.max(0, Math.min(1, progress));
-    p.value = reduced ? target : withTiming(target, { duration: duration.fill, easing: ease.inOut });
+    // מילוי הטבעת מסביר שינוי מצב — נשאר גם בהפחתת תנועה
+    p.value = withTiming(target, { duration: duration.fill, easing: ease.inOut, ...keep });
   }, [progress, reduced]);
 
   const animatedProps = useAnimatedProps(() => ({

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { duration, ease } from '../design/tokens';
+import { duration, ease, keep } from '../design/tokens';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, layout, space } from '../design/tokens';
 import { text } from '../design/typography';
@@ -32,7 +32,7 @@ export function Row({
   // muted: שורה שהושלמה מתעמעמת ב-180ms — "זה כבר מאחוריך". מעבר, לא קפיצה.
   const dim = useSharedValue(muted ? 1 : 0);
   React.useEffect(() => {
-    dim.value = withTiming(muted ? 1 : 0, { duration: duration.toggle, easing: ease.out });
+    dim.value = withTiming(muted ? 1 : 0, { duration: duration.toggle, easing: ease.out, ...keep });
   }, [muted]);
   const mainStyle = useAnimatedStyle(() => ({ opacity: 1 - 0.45 * dim.value }));
 

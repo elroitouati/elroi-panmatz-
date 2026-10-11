@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Ring from './Ring';
 import Button from './Button';
-import { colors, radius, space, ease } from '../design/tokens';
+import { colors, radius, space, ease, keep } from '../design/tokens';
 import { text } from '../design/typography';
 import { haptic } from '../design/haptics';
 
@@ -33,7 +33,11 @@ export default function Celebration({ goal, onClose }) {
   useEffect(() => {
     if (!goal) return;
     if (reduced) {
-      card.value = 1; draw.value = 1; setRing(1); haptic.success();
+      // הפחתת תנועה: הכרטיס מתעמעם פנימה, הטבעת והווי עדיין מתמלאים — בלי הגדלה
+      card.value = 0; draw.value = 0; setRing(1);
+      card.value = withTiming(1, { duration: 200, ...keep });
+      draw.value = withDelay(300, withTiming(1, { duration: 220, ...keep }));
+      haptic.success();
       return;
     }
     card.value = 0; draw.value = 0; setRing(0);
@@ -46,7 +50,7 @@ export default function Celebration({ goal, onClose }) {
 
   const cardStyle = useAnimatedStyle(() => ({
     opacity: card.value,
-    transform: [{ scale: 0.96 + 0.04 * card.value }],
+    transform: [{ scale: reduced ? 1 : 0.96 + 0.04 * card.value }],
   }));
   const scrim = useAnimatedStyle(() => ({ opacity: card.value }));
   const check = useAnimatedProps(() => ({ strokeDashoffset: CHECK_LEN * (1 - draw.value) }));

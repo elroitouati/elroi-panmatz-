@@ -5,7 +5,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withDelay, withSpring, useReducedMotion,
 } from 'react-native-reanimated';
 import Button from './Button';
-import { colors, radius, space, type, ease } from '../design/tokens';
+import { colors, radius, space, type, ease, keep } from '../design/tokens';
 import { ltr } from '../design/rtl';
 import { text } from '../design/typography';
 import { haptic } from '../design/haptics';
@@ -41,8 +41,10 @@ export default function StreakCelebration({ value, onClose }) {
   useEffect(() => {
     if (!value) return;
     if (reduced) {
-      card.value = withTiming(1, { duration: 200 });
-      flame.value = 1; copy.value = 1; wave.value = 1;
+      card.value = withTiming(1, { duration: 200, ...keep });
+      flame.value = withTiming(1, { duration: 200, ...keep });
+      copy.value = withDelay(120, withTiming(1, { duration: 200, ...keep }));
+      wave.value = 1;
       haptic.success();
       return;
     }

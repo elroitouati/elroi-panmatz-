@@ -5,7 +5,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, useAnimatedProps, withTiming, withDelay, withSequence, withSpring,
   interpolateColor, useReducedMotion,
 } from 'react-native-reanimated';
-import { colors, duration, ease } from '../design/tokens';
+import { colors, duration, ease, keep } from '../design/tokens';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const SIZE = 30;
@@ -26,11 +26,11 @@ export default function CheckCircle({ done, pressed }) {
 
   useEffect(() => {
     const t = done ? 1 : 0;
-    if (reduced) { d.value = t; draw.value = t; return; }
-    d.value = withTiming(t, { duration: duration.toggle, easing: ease.out });
+    // מילוי וציור הווי — שינוי מצב, נשארים גם בהפחתת תנועה
+    d.value = withTiming(t, { duration: duration.toggle, easing: ease.out, ...keep });
     draw.value = done
-      ? withDelay(60, withTiming(1, { duration: 220, easing: ease.out }))
-      : withTiming(0, { duration: 100, easing: ease.out });
+      ? withDelay(60, withTiming(1, { duration: 220, easing: ease.out, ...keep }))
+      : withTiming(0, { duration: 100, easing: ease.out, ...keep });
   }, [done, reduced]);
 
   useEffect(() => {
