@@ -19,7 +19,9 @@ import { haptic } from '../design/haptics';
 import { useApp } from '../context/AppContext';
 import { currentStageIndex, stageCountdown } from '../utils/stages';
 import { todayKey, HEB_WEEKDAYS_FULL, HEB_MONTHS } from '../utils/date';
-import { formatValue, unitLabel, computeStreak } from '../utils/fitness';
+import { formatValue, unitLabel } from '../utils/fitness';
+import { currentStreak } from '../utils/journal';
+import Reveal from '../components/Reveal';
 
 // ============================================================================
 //  היום. שאלה אחת: מה עושים היום, וכמה נשאר עד השלב הבא.
@@ -44,7 +46,7 @@ export default function HomeScreen({ navigation }) {
   const enabledGoals = state.goals.filter((g) => g.enabled);
   const todays = enabledGoals.filter((g) => g.trainingDays.includes(weekday));
   const doneCount = todays.filter((g) => todayLog?.goals?.[g.id]?.done).length;
-  const streak = computeStreak(enabledGoals, state.logs);
+  const streak = currentStreak(state.goals, state.weekPlan, state.logs, state.startedAt);
 
   const countdownBig = countdown.hasDate && /^\d+$/.test(countdown.big)
     ? `${ltr(countdown.big)} ימים`
@@ -63,79 +65,87 @@ export default function HomeScreen({ navigation }) {
       action={<IconButton icon="settings-outline" label="הגדרות" onPress={() => navigation.navigate('Settings')} />}
     >
       {/* ---- מה יש היום, לפי התוכנית השבועית ---- */}
-      <TodayPlan
-        plan={state.weekPlan}
-        onEditDay={(day) => setEditDay({ day, type: workoutFor(state.weekPlan, day) })}
-      />
+      <Reveal index={0}>
+        <TodayPlan
+          plan={state.weekPlan}
+          onEditDay={(day) => setEditDay({ day, type: workoutFor(state.weekPlan, day) })}
+        />
+      </Reveal>
 
       {/* ---- גיבור: טבעת יעדי היום + השלב הבא ---- */}
-      <View style={styles.hero}>
-        <Ring progress={todays.length ? doneCount / todays.length : 0} size={112} stroke={10}>
-          {todays.length ? (
-            <Fraction value={doneCount} total={todays.length} />
-          ) : (
-            <Ionicons name="moon" size={30} color={colors.ink2} />
-          )}
-          <Text style={[text.caption, styles.ringLabel]}>{todays.length ? 'יעדי היום' : 'מנוחה'}</Text>
-        </Ring>
+      <Reveal index={1}>
+        <View style={styles.hero}>
+          <Ring progress={todays.length ? doneCount / todays.length : 0} size={112} stroke={10}>
+            {todays.length ? (
+              <Fraction value={doneCount} total={todays.length} />
+            ) : (
+              <Ionicons name="moon" size={30} color={colors.ink2} />
+            )}
+            <Text style={[text.caption, styles.ringLabel]}>{todays.length ? 'יעדי היום' : 'מנוחה'}</Text>
+          </Ring>
 
-        <View style={styles.side}>
-          <Text style={text.caption} numberOfLines={1}>השלב הבא · {stage.name}</Text>
-          <Text style={styles.countdown} numberOfLines={2}>
-            {countdownBig}
-          </Text>
-          <Text style={text.sub} numberOfLines={2}>{countdown.small}</Text>
-          <View style={styles.pill}>
-            <Ionicons name="flame" size={14} color={colors.gold} />
-            <Text style={[text.captionStrong]}>
-              רצף {ltr(streak)} {streak === 1 ? 'יום' : 'ימים'}
+          <View style={styles.side}>
+            <Text style={text.caption} numberOfLines={1}>השלב הבא · {stage.name}</Text>
+            <Text style={styles.countdown} numberOfLines={2}>
+              {countdownBig}
             </Text>
+            <Text style={text.sub} numberOfLines={2}>{countdown.small}</Text>
+            <View style={styles.pill}>
+              <Ionicons name="flame" size={14} color={colors.gold} />
+              <Text style={[text.captionStrong]}>
+                רצף {ltr(streak)} {streak === 1 ? 'יום' : 'ימים'}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      </Reveal>
 
       {/* ---- מסלול הקבלה ---- */}
-      <Text style={[text.caption, styles.header]}>מסלול הקבלה</Text>
-      <View style={styles.pathCard}>
-        <StagePath stages={state.stages} />
-      </View>
+      <Reveal index={2}>
+        <Text style={[text.caption, styles.header]}>מסלול הקבלה</Text>
+        <View style={styles.pathCard}>
+          <StagePath stages={state.stages} />
+        </View>
+      </Reveal>
 
-      {/* ---- האימון של היום ---- */}
-      {todays.length === 0 ? (
-        <>
-          <Text style={[text.caption, styles.header]}>האימון של היום</Text>
-          <View style={styles.pathCard}>
-            <EmptyState
-              icon="moon-outline"
-              title="היום יום מנוחה"
-              body="התאוששות היא חלק מהתוכנית. נחזור מחר."
-              actionLabel="שינוי ימי האימון"
-              onAction={() => navigation.navigate('כושר')}
-            />
-          </View>
-        </>
-      ) : (
-        <Section
-          title="האימון של היום"
-          footer="לחיצה על שורה מסמנת ביצוע. ביעד עם מספרים נרשם היעד היומי — את התוצאה המדויקת רושמים במסך כושר."
-        >
-          {todays.map((goal) => {
-            const done = !!todayLog?.goals?.[goal.id]?.done;
-            const measured = goal.tracking === 'measured';
-            return (
-              <Row
-                key={goal.id}
-                title={goal.name}
-                subtitle={measured ? null : 'סימון בלבד'}
-                value={measured ? `${ltr(formatValue(goal, goal.current))} ${unitLabel(goal)}` : null}
-                leading={(pressed) => <CheckCircle done={done} pressed={pressed} />}
-                onPress={() => toggle(goal, done)}
-                accessibilityLabel={`${goal.name}, ${done ? 'בוצע' : 'לא בוצע'}`}
+      <Reveal index={3}>
+        {/* ---- האימון של היום ---- */}
+        {todays.length === 0 ? (
+          <>
+            <Text style={[text.caption, styles.header]}>האימון של היום</Text>
+            <View style={styles.pathCard}>
+              <EmptyState
+                icon="moon-outline"
+                title="היום יום מנוחה"
+                body="התאוששות היא חלק מהתוכנית. נחזור מחר."
+                actionLabel="שינוי ימי האימון"
+                onAction={() => navigation.navigate('כושר')}
               />
-            );
-          })}
-        </Section>
-      )}
+            </View>
+          </>
+        ) : (
+          <Section
+            title="האימון של היום"
+            footer="לחיצה על שורה מסמנת ביצוע. ביעד עם מספרים נרשם היעד היומי — את התוצאה המדויקת רושמים במסך כושר."
+          >
+            {todays.map((goal) => {
+              const done = !!todayLog?.goals?.[goal.id]?.done;
+              const measured = goal.tracking === 'measured';
+              return (
+                <Row
+                  key={goal.id}
+                  title={goal.name}
+                  subtitle={measured ? null : 'סימון בלבד'}
+                  value={measured ? `${ltr(formatValue(goal, goal.current))} ${unitLabel(goal)}` : null}
+                  leading={(pressed) => <CheckCircle done={done} pressed={pressed} />}
+                  onPress={() => toggle(goal, done)}
+                  accessibilityLabel={`${goal.name}, ${done ? 'בוצע' : 'לא בוצע'}`}
+                />
+              );
+            })}
+          </Section>
+        )}
+      </Reveal>
       <WorkoutSheet target={editDay} onClose={() => setEditDay(null)} onSelect={setDayWorkout} />
     </Screen>
   );

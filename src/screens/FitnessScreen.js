@@ -8,6 +8,7 @@ import IconButton from '../components/IconButton';
 import ProgressBar from '../components/ProgressBar';
 import MiniChart from '../components/MiniChart';
 import EmptyState from '../components/EmptyState';
+import Reveal from '../components/Reveal';
 import ValueSheet from '../sheets/ValueSheet';
 import EditGoalSheet from '../sheets/EditGoalSheet';
 import { colors, radius, space } from '../design/tokens';
@@ -145,7 +146,8 @@ export default function FitnessScreen() {
         </View>
       ) : (
         <View style={styles.list}>
-          {state.goals.map((goal) => (
+          {state.goals.map((goal, i) => (
+            <Reveal key={goal.id} index={i}>
             <GoalCard
               key={goal.id}
               goal={goal}
@@ -157,6 +159,7 @@ export default function FitnessScreen() {
               onMark={mark}
               onUnmark={unmarkGoalToday}
             />
+            </Reveal>
           ))}
           <Text style={[text.caption, styles.footnote]}>
             + זה "קל לי", − זה "קשה לי". כל לחיצה מזיזה את היעד היומי בצעד אחד.

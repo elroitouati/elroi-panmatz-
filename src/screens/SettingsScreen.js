@@ -20,9 +20,10 @@ import { reminderDays, WORKOUTS, workoutFor } from '../utils/weekPlan';
 // ============================================================================
 
 export default function SettingsScreen({ navigation }) {
-  const { state, setStageDate, updateSettings, setDayReminder } = useApp();
+  const { state, setStageDate, updateSettings, setDayReminder, setStartedAt } = useApp();
   const [editStage, setEditStage] = useState(null);
   const [editTime, setEditTime] = useState(null);
+  const [editStart, setEditStart] = useState(null);
   if (!state) return null;
   const { settings } = state;
 
@@ -51,6 +52,18 @@ export default function SettingsScreen({ navigation }) {
             accessibilityLabel={`עריכת תאריך ל${stage.name}`}
           />
         ))}
+      </Section>
+
+      <Section
+        title="מעקב"
+        footer="לפני היום הזה הלוח לא מסמן פספוסים — רק אימונים שסימנת."
+      >
+        <Row
+          title="התחלתי לעקוב ב-"
+          value={state.startedAt ? ltr(formatHebDate(state.startedAt)) : 'לא נקבע'}
+          chevron
+          onPress={() => setEditStart({ id: 'start', name: 'תחילת המעקב', date: state.startedAt })}
+        />
       </Section>
 
       <Section title="התראות">
@@ -121,6 +134,12 @@ export default function SettingsScreen({ navigation }) {
           else setDayReminder(editTime.day, time);
         }}
         onReset={() => setDayReminder(editTime.day, null)}
+      />
+
+      <DateSheet
+        stage={editStart}
+        onClose={() => setEditStart(null)}
+        onSave={(key) => setStartedAt(key)}
       />
 
       <DateSheet

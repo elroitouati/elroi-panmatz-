@@ -279,6 +279,19 @@ export function AppProvider({ children }) {
     });
   };
 
+  // יום מוצדק (מחלה/חופש) — לא פספוס ולא שובר רצף
+  const setDayExcused = (dateKey, excused) => {
+    setState((s) => {
+      const log = s.logs[dateKey] || { trained: false, goals: {} };
+      return { ...s, logs: { ...s.logs, [dateKey]: { ...log, excused } } };
+    });
+  };
+
+  // היום שממנו סופרים פספוסים
+  const setStartedAt = (dateKey) => {
+    setState((s) => ({ ...s, startedAt: dateKey }));
+  };
+
   // ---- פסיכוטכני ----
   const markPsychToday = () => {
     const key = todayKey();
@@ -343,6 +356,8 @@ export function AppProvider({ children }) {
     markGoalToday,
     unmarkGoalToday,
     setDayTrained,
+    setDayExcused,
+    setStartedAt,
     // פסיכוטכני
     markPsychToday,
     unmarkPsychToday,

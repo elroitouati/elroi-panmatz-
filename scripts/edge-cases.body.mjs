@@ -3,6 +3,7 @@ import * as S from './stages.js';
 import { todayKey, dayKey, buildMonthGrid } from './date.js';
 import * as R from './reminders.js';
 import * as W from './weekPlan.js';
+import * as J from './journal.js';
 
 export default function run() {
 let pass = 0, fail = 0;
@@ -109,6 +110,38 @@ t('ימי תזכורת = איחוד יעדים ותוכנית', () => {
   const days = W.reminderDays([{ enabled: true, trainingDays: [2] }, { enabled: false, trainingDays: [6] }], ['rest','run','rest','rest','rest','rest','rest']);
   ok(days.join() === '1,2', 'קיבלנו ' + days.join());
 });
+
+console.log('--- יומן ---');
+{
+  // שבוע: א=כוח ב=ריצה ג=מנוחה ...; 2026-10-04 הוא יום ראשון
+  const P = ['strength', 'run', 'rest', 'strength', 'run', 'strength', 'run'];
+  const G = [];
+  const T = '2026-10-08'; // חמישי
+  const logs = {
+    '2026-10-04': { trained: true }, '2026-10-05': { trained: true },
+    '2026-10-07': { trained: true },
+  };
+  const st = (k, start) => J.dayStatus({ goals: G, plan: P, log: logs[k], key: k, today: T, startedAt: start });
+  t('יום מנוחה בתוכנית = מנוחה', () => ok(st('2026-10-06') === 'rest'));
+  t('היום בלי סימון = today', () => ok(st('2026-10-08') === 'today'));
+  t('יום עתידי = future', () => ok(st('2026-10-09') === 'future'));
+  t('יום שעבר בלי אימון = פספוס', () => ok(st('2026-10-03') === 'missed'));
+  t('לפני תחילת המעקב אין פספוס', () => ok(st('2026-10-03', '2026-10-04') === 'rest'));
+  t('רצף מדלג על יום מנוחה', () => ok(J.currentStreak(G, P, logs, '2026-10-04', T) === 3, 'קיבלנו ' + J.currentStreak(G, P, logs, '2026-10-04', T)));
+  const ex = { ...logs, '2026-10-05': { excused: true } };
+  t('יום מוצדק לא שובר רצף', () => ok(J.currentStreak(G, P, ex, '2026-10-04', T) === 2));
+  t('יום מוצדק = excused', () => ok(J.dayStatus({ goals: G, plan: P, log: ex['2026-10-05'], key: '2026-10-05', today: T }) === 'excused'));
+  const br = { '2026-10-04': { trained: true }, '2026-10-05': { trained: true }, '2026-10-07': { trained: true } };
+  t('שיא רצף אחרי פספוס', () => {
+    const b = J.bestStreak(G, P, { ...br, '2026-10-01': { trained: true } }, '2026-10-01', T);
+    ok(b === 3, 'קיבלנו ' + b);
+  });
+  t('סיכום טווח: היום הפתוח לא נספר', () => {
+    const s = J.rangeStats(J.weekKeys(T), G, P, logs, '2026-10-04', T);
+    ok(s.done === 3 && s.due === 3 && s.adherence === 100 && s.strength === 2 && s.run === 1, JSON.stringify(s));
+  });
+  t('שבוע מתחיל בראשון', () => ok(J.weekKeys(T)[0] === '2026-10-04' && J.weekKeys(T)[6] === '2026-10-10'));
+}
 
 console.log('\n' + pass + ' עברו, ' + fail + ' נכשלו');
 return fail === 0;

@@ -58,7 +58,7 @@ export default function DateSheet({ stage, onClose, onSave, onClear }) {
       {error ? <Text style={[text.sub, styles.error]} accessibilityLiveRegion="polite">{error}</Text> : null}
 
       <Button label="שמירת התאריך" variant="primary" onPress={save} wrapStyle={styles.cta} />
-      {s.date ? (
+      {s.date && onClear ? (
         <Button label="הסרת התאריך" variant="plain" onPress={() => { onClear(); onClose(); }} wrapStyle={styles.clear} />
       ) : null}
     </Sheet>

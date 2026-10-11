@@ -6,6 +6,7 @@ import Ring from '../components/Ring';
 import Button from '../components/Button';
 import Stepper from '../components/Stepper';
 import Fraction from '../components/Fraction';
+import Reveal from '../components/Reveal';
 import { Section, Row } from '../components/Group';
 import { colors, radius, space } from '../design/tokens';
 import { text } from '../design/typography';
@@ -34,6 +35,7 @@ export default function PsychScreen() {
 
   return (
     <Screen title="פסיכוטכני" overline="הכנה קוגניטיבית">
+      <Reveal index={0}>
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <Ring progress={target ? week / target : 0} size={112} stroke={10}>
@@ -66,6 +68,9 @@ export default function PsychScreen() {
         />
       </View>
 
+      </Reveal>
+
+      <Reveal index={1}>
       <Section title="אתרי תרגול" footer="הקישורים נפתחים בדפדפן.">
         {state.psych.links.map((link) => (
           <Row
@@ -78,6 +83,7 @@ export default function PsychScreen() {
           />
         ))}
       </Section>
+      </Reveal>
     </Screen>
   );
 }
