@@ -1,12 +1,12 @@
 import React, { useCallback } from 'react';
-import { I18nManager, StyleSheet, LogBox, Platform } from 'react-native';
+import { I18nManager, StyleSheet, LogBox, Platform, View } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   useFonts,
@@ -44,7 +44,7 @@ if (Platform.OS === 'android') {
   NavigationBar.setButtonStyleAsync('light').catch(() => {});
 }
 
-const Tab = createBottomTabNavigator();
+const Tab = createMaterialTopTabNavigator();
 const RootStack = createNativeStackNavigator();
 
 const navTheme = {
@@ -62,9 +62,21 @@ const navTheme = {
 function Tabs() {
   return (
     <Tab.Navigator
-      // מעבר טאב בלי אנימציה — פעולה שחוזרת עשרות פעמים ביום
-      screenOptions={{ headerShown: false }}
+      tabBarPosition="bottom"
       tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{
+        // החלקה בין המסכים: הדף עוקב אחרי האצבע 1:1, ומהירות ההעפה מחליטה
+        // (pager נייטיב — פיזיקה של המערכת). ב-RTL המסך הבא נמצא משמאל.
+        swipeEnabled: true,
+        // לחיצה על טאב — מיידית, בלי גלילה בין דפים (פעולה תכופה = אפס תנועה)
+        animationEnabled: false,
+        // המסך השכן כבר מוכן, כך שבהחלקה רואים תוכן ולא מסך ריק
+        lazy: true,
+        lazyPreloadDistance: 1,
+        lazyPlaceholder: () => <View style={styles.root} />,
+      }}
+      sceneContainerStyle={{ backgroundColor: colors.bg }}
+      style={{ backgroundColor: colors.bg }}
     >
       <Tab.Screen name="היום" component={HomeScreen} />
       <Tab.Screen name="כושר" component={FitnessScreen} />
