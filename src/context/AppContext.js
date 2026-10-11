@@ -5,8 +5,10 @@ import {
   DEFAULT_GOALS,
   DEFAULT_PSYCH_LINKS,
   DEFAULT_PSYCH_WEEKLY_TARGET,
+  DEFAULT_WEEK_PLAN,
 } from '../data/defaults';
 import { todayKey } from '../utils/date';
+import { reminderDays } from '../utils/weekPlan';
 import { bumpedCurrent, loweredCurrent, atStart, reachedFinal, isNewPersonalBest } from '../utils/fitness';
 import {
   ensurePermissions,
@@ -22,6 +24,7 @@ function freshState() {
     startedAt: todayKey(), // היום הראשון באפליקציה — לפניו אין "פספוס"
     stages: DEFAULT_STAGES.map((s) => ({ ...s })),
     goals: DEFAULT_GOALS.map((g) => ({ ...g, trainingDays: [...g.trainingDays], history: [] })),
+    weekPlan: [...DEFAULT_WEEK_PLAN], // סוג אימון לכל יום בשבוע
     logs: {}, // { 'YYYY-MM-DD': { trained, goals: { id: {done, value} } } }
     psych: {
       links: DEFAULT_PSYCH_LINKS.map((l) => ({ ...l })),
@@ -47,6 +50,7 @@ function normalize(loaded) {
     startedAt: loaded.startedAt || known[0] || base.startedAt,
     stages: Array.isArray(loaded.stages) && loaded.stages.length ? loaded.stages : base.stages,
     goals: Array.isArray(loaded.goals) && loaded.goals.length ? loaded.goals : base.goals,
+    weekPlan: Array.isArray(loaded.weekPlan) && loaded.weekPlan.length === 7 ? loaded.weekPlan : base.weekPlan,
     logs: loaded.logs || {},
     psych: {
       links: loaded.psych?.links?.length ? loaded.psych.links : base.psych.links,
@@ -87,12 +91,12 @@ export function AppProvider({ children }) {
       }
       const granted = await ensurePermissions();
       if (!granted) return;
-      // איחוד כל ימי האימון של היעדים הפעילים
-      const days = new Set();
-      state.goals.forEach((g) => {
-        if (g.enabled) g.trainingDays.forEach((d) => days.add(d));
-      });
-      await scheduleDailyTrainingReminders([...days], state.settings);
+      // ימי אימון של היעדים הפעילים + ימי אימון בתוכנית השבועית
+      await scheduleDailyTrainingReminders(
+        reminderDays(state.goals, state.weekPlan),
+        state.settings,
+        state.weekPlan
+      );
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -100,6 +104,7 @@ export function AppProvider({ children }) {
     state?.settings.reminderHour,
     state?.settings.reminderMinute,
     JSON.stringify(state?.settings.reminderByDay || {}),
+    (state?.weekPlan || []).join(','),
     // חתימה של ימי האימון של יעדים פעילים
     state?.goals.map((g) => (g.enabled ? g.trainingDays.join('') : '')).join('|'),
   ]);
@@ -300,6 +305,15 @@ export function AppProvider({ children }) {
     setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
   };
 
+  // סוג האימון ביום מסוים בתוכנית השבועית
+  const setDayWorkout = (weekday, type) => {
+    setState((s) => {
+      const plan = [...(s.weekPlan || DEFAULT_WEEK_PLAN)];
+      plan[weekday] = type;
+      return { ...s, weekPlan: plan };
+    });
+  };
+
   // שעת תזכורת ליום מסוים. time=null מחזיר את היום לשעה הרגילה.
   const setDayReminder = (weekday, time) => {
     setState((s) => {
@@ -336,6 +350,7 @@ export function AppProvider({ children }) {
     // הגדרות
     updateSettings,
     setDayReminder,
+    setDayWorkout,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

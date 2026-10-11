@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
@@ -12,6 +12,9 @@ import { colors, radius, space, type } from '../design/tokens';
 import { text } from '../design/typography';
 import { ltr, dir } from '../design/rtl';
 import Fraction from '../components/Fraction';
+import TodayPlan from '../components/TodayPlan';
+import WorkoutSheet from '../sheets/WorkoutSheet';
+import { workoutFor } from '../utils/weekPlan';
 import { haptic } from '../design/haptics';
 import { useApp } from '../context/AppContext';
 import { currentStageIndex, stageCountdown } from '../utils/stages';
@@ -29,7 +32,8 @@ function todayOverline() {
 }
 
 export default function HomeScreen({ navigation }) {
-  const { state, markGoalToday, unmarkGoalToday } = useApp();
+  const { state, markGoalToday, unmarkGoalToday, setDayWorkout } = useApp();
+  const [editDay, setEditDay] = useState(null);
   if (!state) return null;
 
   const stage = state.stages[currentStageIndex(state.stages)];
@@ -58,6 +62,12 @@ export default function HomeScreen({ navigation }) {
       overline={todayOverline()}
       action={<IconButton icon="settings-outline" label="הגדרות" onPress={() => navigation.navigate('Settings')} />}
     >
+      {/* ---- מה יש היום, לפי התוכנית השבועית ---- */}
+      <TodayPlan
+        plan={state.weekPlan}
+        onEditDay={(day) => setEditDay({ day, type: workoutFor(state.weekPlan, day) })}
+      />
+
       {/* ---- גיבור: טבעת יעדי היום + השלב הבא ---- */}
       <View style={styles.hero}>
         <Ring progress={todays.length ? doneCount / todays.length : 0} size={112} stroke={10}>
@@ -126,6 +136,7 @@ export default function HomeScreen({ navigation }) {
           })}
         </Section>
       )}
+      <WorkoutSheet target={editDay} onClose={() => setEditDay(null)} onSelect={setDayWorkout} />
     </Screen>
   );
 }

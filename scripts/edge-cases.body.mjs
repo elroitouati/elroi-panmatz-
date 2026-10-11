@@ -2,6 +2,7 @@ import * as F from './fitness.js';
 import * as S from './stages.js';
 import { todayKey, dayKey, buildMonthGrid } from './date.js';
 import * as R from './reminders.js';
+import * as W from './weekPlan.js';
 
 export default function run() {
 let pass = 0, fail = 0;
@@ -96,6 +97,18 @@ t('הגדרות ישנות בלי reminderByDay', () => ok(R.formatTime(R.remind
 t('גלישה קדימה אחרי חצות', () => ok(R.formatTime(R.shiftTime({ hour: 23, minute: 45 }, 30)) === '00:15'));
 t('גלישה אחורה לפני חצות', () => ok(R.formatTime(R.shiftTime({ hour: 0, minute: 0 }, -15)) === '23:45'));
 t('שעה מיוחדת מזוהה', () => ok(R.hasCustomTime(base, 5) && !R.hasCustomTime(base, 1)));
+
+console.log('--- תוכנית שבועית ---');
+const plan = ['strength', 'run', 'rest', 'strength', 'run', 'strength', 'run'];
+t('ראשון = אימון כוח', () => ok(W.workoutFor(plan, 0) === 'strength'));
+t('שלישי = מנוחה', () => ok(W.workoutFor(plan, 2) === 'rest'));
+t('תוכנית חסרה = מנוחה', () => ok(W.workoutFor(undefined, 3) === 'rest'));
+t('סוג לא מוכר = מנוחה', () => ok(W.workoutFor(['yoga'], 0) === 'rest'));
+t('ספירה 3/3/1', () => { const c = W.planCounts(plan); ok(c.strength === 3 && c.run === 3 && c.rest === 1); });
+t('ימי תזכורת = איחוד יעדים ותוכנית', () => {
+  const days = W.reminderDays([{ enabled: true, trainingDays: [2] }, { enabled: false, trainingDays: [6] }], ['rest','run','rest','rest','rest','rest','rest']);
+  ok(days.join() === '1,2', 'קיבלנו ' + days.join());
+});
 
 console.log('\n' + pass + ' עברו, ' + fail + ' נכשלו');
 return fail === 0;

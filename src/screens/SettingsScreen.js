@@ -12,6 +12,7 @@ import { ltr } from '../design/rtl';
 import { useApp } from '../context/AppContext';
 import { formatHebDate, HEB_WEEKDAYS_FULL } from '../utils/date';
 import { reminderFor, hasCustomTime, formatTime } from '../utils/reminders';
+import { reminderDays, WORKOUTS, workoutFor } from '../utils/weekPlan';
 
 // ============================================================================
 //  הגדרות — נפתח מלמטה כמו גיליון של iOS, ונסגר ב-X.
@@ -26,10 +27,8 @@ export default function SettingsScreen({ navigation }) {
   const { settings } = state;
 
   const defaultTime = { hour: settings.reminderHour, minute: settings.reminderMinute ?? 0 };
-  // ימי האימון של היעדים הפעילים — רק בהם נשלחת תזכורת
-  const trainingDays = [...new Set(
-    state.goals.filter((g) => g.enabled).flatMap((g) => g.trainingDays)
-  )].sort((a, b) => a - b);
+  // ימי האימון (יעדים פעילים + התוכנית השבועית) — רק בהם נשלחת תזכורת
+  const trainingDays = reminderDays(state.goals, state.weekPlan);
 
   return (
     <Screen
@@ -84,7 +83,7 @@ export default function SettingsScreen({ navigation }) {
       {settings.notificationsEnabled && trainingDays.length ? (
         <Section
           title="שעה לפי יום"
-          footer="לחיצה על יום קובעת לו שעה משלו (בזהב). מופיעים רק ימי האימון — יום נוסף מוסיפים בימי האימון של היעד, במסך כושר."
+          footer="לחיצה על יום קובעת לו שעה משלו (בזהב). מופיעים רק ימי אימון — את התוכנית השבועית משנים בלחיצה על יום במסך הבית."
         >
           {trainingDays.map((d) => {
             const custom = hasCustomTime(settings, d);
@@ -92,6 +91,7 @@ export default function SettingsScreen({ navigation }) {
               <Row
                 key={d}
                 title={`יום ${HEB_WEEKDAYS_FULL[d]}`}
+                subtitle={WORKOUTS[workoutFor(state.weekPlan, d)].label}
                 value={ltr(formatTime(reminderFor(settings, d)))}
                 valueStyle={custom ? styles.gold : null}
                 chevron

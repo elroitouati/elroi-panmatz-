@@ -172,3 +172,7 @@ export const DEFAULT_PSYCH_LINKS = [
 ];
 
 export const DEFAULT_PSYCH_WEEKLY_TARGET = 5;
+
+// התוכנית השבועית — מה עושים בכל יום (0=ראשון..6=שבת).
+// 'strength' = אימון כוח · 'run' = ריצה · 'rest' = מנוחה
+export const DEFAULT_WEEK_PLAN = ['strength', 'run', 'rest', 'strength', 'run', 'strength', 'run'];
