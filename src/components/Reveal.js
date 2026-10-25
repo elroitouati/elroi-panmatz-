@@ -1,5 +1,5 @@
 import React from 'react';
-import Animated, { withDelay, withTiming, useReducedMotion } from 'react-native-reanimated';
+import Animated, { withDelay, withTiming, useReducedMotion, LinearTransition } from 'react-native-reanimated';
 import { ease, keep } from '../design/tokens';
 
 // ============================================================================
@@ -39,10 +39,18 @@ function riseIn(index) {
   };
 }
 
-export default function Reveal({ index = 0, style, children }) {
+// כשבלוק מעליו נעלם (למשל "הצל את הרצף"), הבלוק עולה למקומו בתנועה
+// על המסך: 250ms ease-in-out. layout transition — transform בלבד, לא height.
+const shift = LinearTransition.duration(250).easing(ease.inOut);
+
+export default function Reveal({ index = 0, style, children, follow }) {
   const reduced = useReducedMotion();
   return (
-    <Animated.View style={style} entering={reduced ? fadeIn(index) : riseIn(index)}>
+    <Animated.View
+      style={style}
+      entering={reduced ? fadeIn(index) : riseIn(index)}
+      layout={follow && !reduced ? shift : undefined}
+    >
       {children}
     </Animated.View>
   );

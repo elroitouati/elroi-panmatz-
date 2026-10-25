@@ -11,6 +11,7 @@ import { haptic } from '../design/haptics';
 import { keyToDate, HEB_WEEKDAYS_FULL, HEB_MONTHS } from '../utils/date';
 import { WORKOUTS, workoutFor } from '../utils/weekPlan';
 import { formatValue, unitLabel } from '../utils/fitness';
+import { canMakeUp, MAKEUP_WINDOW } from '../utils/journal';
 
 // ============================================================================
 //  פירוט יום: מה היה מתוכנן, מה בוצע בפועל, ופעולה אחת ראשית.
@@ -19,6 +20,7 @@ import { formatValue, unitLabel } from '../utils/fitness';
 
 const STATUS = {
   done: { label: 'בוצע', color: colors.gold, bg: colors.goldSoft, icon: 'checkmark-circle' },
+  madeup: { label: 'הושלם — הרצף נשמר', color: colors.gold, bg: colors.goldSoft, icon: 'refresh-circle' },
   missed: { label: 'פספוס', color: colors.red, bg: colors.redSoft, icon: 'close-circle' },
   excused: { label: 'יום מוצדק', color: colors.ink2, bg: colors.bgDeep, icon: 'bandage' },
   today: { label: 'היום', color: colors.ink, bg: colors.bgDeep, icon: 'time' },
@@ -26,7 +28,7 @@ const STATUS = {
   rest: { label: 'מנוחה', color: colors.ink2, bg: colors.bgDeep, icon: 'moon' },
 };
 
-export default function DaySheet({ target, state, onClose, onSetTrained, onSetExcused }) {
+export default function DaySheet({ target, state, onClose, onSetTrained, onSetExcused, onSetMadeUp }) {
   const last = useRef(target);
   if (target) last.current = target;
   const t = last.current;
@@ -40,6 +42,10 @@ export default function DaySheet({ target, state, onClose, onSetTrained, onSetEx
   const future = t.status === 'future';
   const trained = !!log?.trained;
   const excused = !!log?.excused && !trained;
+  const madeUp = !!log?.madeUp && !trained;
+  const missed = t.status === 'missed';
+  const makeUpOpen = missed && canMakeUp(t.key);
+  const madeUpOn = madeUp && log.madeUp ? keyToDate(log.madeUp) : null;
 
   const goalsDone = Object.entries(log?.goals || {})
     .filter(([, v]) => v?.done)
@@ -95,7 +101,29 @@ export default function DaySheet({ target, state, onClose, onSetTrained, onSetEx
               onClose();
             }}
           />
-          {!trained ? (
+          {makeUpOpen ? (
+            <Button
+              label="השלמתי את האימון — הצל את הרצף"
+              icon="refresh"
+              variant="secondary"
+              onPress={() => { haptic.success(); onSetMadeUp(t.key, true); onClose(); }}
+              accessibilityHint="עשית את האימון הזה ביום אחר. נספר כאימון ושומר את הרצף"
+            />
+          ) : null}
+          {madeUp ? (
+            <>
+              <Text style={[text.sub, styles.center]}>
+                {madeUpOn ? `השלמת ביום ${HEB_WEEKDAYS_FULL[madeUpOn.getDay()]}.` : 'השלמת את האימון הזה.'}
+              </Text>
+              <Button label="ביטול ההשלמה" variant="plain" onPress={() => { onSetMadeUp(t.key, false); onClose(); }} />
+            </>
+          ) : null}
+          {missed && !makeUpOpen ? (
+            <Text style={[text.caption, styles.center]}>
+              אפשר להשלים פספוס עד {ltr(MAKEUP_WINDOW)} ימים אחריו.
+            </Text>
+          ) : null}
+          {!trained && !madeUp ? (
             <Button
               label={excused ? 'ביטול יום מוצדק' : 'יום מוצדק (מחלה / חופש)'}
               icon={excused ? undefined : 'bandage-outline'}

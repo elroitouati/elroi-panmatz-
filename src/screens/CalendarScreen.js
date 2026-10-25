@@ -28,7 +28,7 @@ import { dayStatus, currentStreak, bestStreak, rangeStats } from '../utils/journ
 const plural = (n, one, many) => `${ltr(n)} ${n === 1 ? one : many}`;
 
 export default function CalendarScreen() {
-  const { state, setDayTrained, setDayExcused } = useApp();
+  const { state, setDayTrained, setDayExcused, setDayMadeUp } = useApp();
   const reduced = useReducedMotion();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -107,7 +107,7 @@ export default function CalendarScreen() {
                       planIcon={type === 'rest' ? null : WORKOUTS[type].icon}
                       onPress={() => { haptic.selection(); setOpenDay({ key, status }); }}
                       label={`${d.getDate()} — ${WORKOUTS[type].label}, ${
-                        { done: 'בוצע', missed: 'פספוס', excused: 'מוצדק', today: 'היום', future: 'עתידי', rest: 'מנוחה' }[status]
+                        { done: 'בוצע', madeup: 'הושלם', missed: 'פספוס', excused: 'מוצדק', today: 'היום', future: 'עתידי', rest: 'מנוחה' }[status]
                       }`}
                     />
                   );
@@ -119,6 +119,7 @@ export default function CalendarScreen() {
           <View style={styles.legend}>
             <Legend swatch={styles.lgDone} label="בוצע" />
             <Legend swatch={styles.lgMissed} label="פספוס" />
+            <Legend swatch={styles.lgMadeUp} label="הושלם" />
             <Legend swatch={styles.lgExcused} label="מוצדק" />
           </View>
           <View style={styles.legend}>
@@ -155,6 +156,14 @@ export default function CalendarScreen() {
             valueStyle={m.adherence >= 80 ? styles.gold : null}
             leading={<Ionicons name="checkmark-done-outline" size={20} color={colors.ink2} />}
           />
+          {m.madeUp ? (
+            <Row
+              title="השלמות"
+              subtitle="פספוסים שהשלמת — הרצף נשמר"
+              value={ltr(m.madeUp)}
+              leading={<Ionicons name="refresh" size={20} color={colors.gold} />}
+            />
+          ) : null}
           {m.excused ? (
             <Row
               title="ימים מוצדקים"
@@ -171,6 +180,7 @@ export default function CalendarScreen() {
         onClose={() => setOpenDay(null)}
         onSetTrained={setDayTrained}
         onSetExcused={setDayExcused}
+        onSetMadeUp={setDayMadeUp}
       />
     </Screen>
   );
@@ -201,11 +211,12 @@ const styles = StyleSheet.create({
   week: { flexDirection: 'row', marginBottom: 2 },
   weekHead: { flex: 1, textAlign: 'center', marginBottom: space[1] },
   empty: { flex: 1 },
-  legend: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space[5], marginTop: space[3] },
+  legend: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space[4], marginTop: space[3] },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   lg: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: 'transparent' },
   lgDone: { backgroundColor: colors.gold, borderColor: colors.gold },
   lgMissed: { borderColor: colors.red },
+  lgMadeUp: { borderColor: colors.gold },
   lgExcused: { backgroundColor: colors.bgDeep, borderColor: colors.ink3 },
   hint: { paddingHorizontal: space[4], paddingTop: space[2] },
   gold: { color: colors.gold, fontFamily: 'Heebo_700Bold' },

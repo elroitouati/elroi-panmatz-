@@ -5,6 +5,8 @@ import { workoutFor } from './weekPlan';
 //  יומן האימונים — הלוח מחובר לתוכנית השבועית.
 //  יום "מחויב" = יום שהתוכנית קובעת בו אימון, או שיעד פעיל מתאמן בו.
 //  יום מוצדק (מחלה/חופש) לא נחשב פספוס ולא שובר רצף.
+//  יום שהושלם (השלמה): פספסת, ועשית את האימון ביום אחר תוך 3 ימים —
+//  נספר כאימון ושומר את הרצף. log.madeUp = היום שבו השלמת.
 //  לפני startedAt (תחילת המעקב) אין פספוסים — רק מה שסומן.
 // ============================================================================
 
@@ -13,9 +15,12 @@ export function isDue(goals, plan, weekday) {
   return (goals || []).some((g) => g.enabled && g.trainingDays.includes(weekday));
 }
 
-// 'done' | 'excused' | 'missed' | 'today' | 'rest' | 'future'
+export const MAKEUP_WINDOW = 3; // כמה ימים אחרי הפספוס עוד אפשר להשלים
+
+// 'done' | 'madeup' | 'excused' | 'missed' | 'today' | 'rest' | 'future'
 export function dayStatus({ goals, plan, log, key, today = todayKey(), startedAt }) {
   if (log?.trained) return 'done';
+  if (log?.madeUp) return 'madeup';
   if (log?.excused) return 'excused';
   const due = isDue(goals, plan, keyToDate(key).getDay());
   if (!due) return 'rest';
@@ -34,7 +39,7 @@ export function currentStreak(goals, plan, logs, startedAt, today = todayKey()) 
     const k = dayKey(cursor);
     if (startedAt && k < startedAt) break;
     const st = dayStatus({ goals, plan, log: logs[k], key: k, today, startedAt });
-    if (st === 'done') streak += 1;
+    if (st === 'done' || st === 'madeup') streak += 1;
     else if (st === 'missed') break;
     cursor.setDate(cursor.getDate() - 1);
   }
@@ -50,7 +55,7 @@ export function bestStreak(goals, plan, logs, startedAt, today = todayKey()) {
     const k = dayKey(cursor);
     if (k > today) break;
     const st = dayStatus({ goals, plan, log: logs[k], key: k, today, startedAt });
-    if (st === 'done') { run += 1; best = Math.max(best, run); }
+    if (st === 'done' || st === 'madeup') { run += 1; best = Math.max(best, run); }
     else if (st === 'missed') run = 0;
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -59,19 +64,21 @@ export function bestStreak(goals, plan, logs, startedAt, today = todayKey()) {
 
 // סיכום לטווח ימים (חודש / שבוע): כמה בוצעו מתוך המחויבים, ופילוח לפי סוג
 export function rangeStats(keys, goals, plan, logs, startedAt, today = todayKey()) {
-  const s = { done: 0, due: 0, met: 0, excused: 0, strength: 0, run: 0 };
+  const s = { done: 0, due: 0, met: 0, excused: 0, madeUp: 0, strength: 0, run: 0 };
   keys.forEach((k) => {
     if (!k || k > today) return;
     const st = dayStatus({ goals, plan, log: logs[k], key: k, today, startedAt });
-    if (st === 'done') {
+    if (st === 'madeup') s.madeUp += 1;
+    if (st === 'done' || st === 'madeup') {
       s.done += 1;
       const type = workoutFor(plan, keyToDate(k).getDay());
       if (type === 'strength' || type === 'run') s[type] += 1;
     }
     if (st === 'excused') s.excused += 1;
     // היום נכנס לחישוב רק אם כבר בוצע — הוא עוד לא נגמר
-    const counts = st === 'missed' || (st === 'done' && isDue(goals, plan, keyToDate(k).getDay()));
-    if (counts) { s.due += 1; if (st === 'done') s.met += 1; }
+    const kept = st === 'done' || st === 'madeup';
+    const counts = st === 'missed' || (kept && isDue(goals, plan, keyToDate(k).getDay()));
+    if (counts) { s.due += 1; if (kept) s.met += 1; }
   });
   s.adherence = s.due === 0 ? 0 : Math.round((s.met / s.due) * 100);
   return s;
@@ -99,4 +106,29 @@ export function milestoneCheck(streak, last) {
   const base = last != null && streak < last ? null : last;
   if (isMilestone(streak) && base !== streak) return { celebrate: streak, last: streak };
   return { celebrate: null, last: base };
+}
+
+// ---------------------------------------------------------------------------
+//  השלמה
+// ---------------------------------------------------------------------------
+function daysBetween(a, b) {
+  return Math.round((keyToDate(b) - keyToDate(a)) / 86400000);
+}
+
+// אפשר להשלים פספוס רק מהיום שאחריו ועד MAKEUP_WINDOW ימים
+export function canMakeUp(key, today = todayKey()) {
+  const d = daysBetween(key, today);
+  return d >= 1 && d <= MAKEUP_WINDOW;
+}
+
+// הפספוס האחרון שעוד אפשר להציל (הכי קרוב להיום), או null
+export function rescuableMiss(goals, plan, logs, startedAt, today = todayKey()) {
+  const cursor = keyToDate(today);
+  for (let i = 1; i <= MAKEUP_WINDOW; i++) {
+    cursor.setDate(cursor.getDate() - 1);
+    const k = dayKey(cursor);
+    const st = dayStatus({ goals, plan, log: logs[k], key: k, today, startedAt });
+    if (st === 'missed') return k;
+  }
+  return null;
 }

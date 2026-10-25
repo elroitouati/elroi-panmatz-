@@ -20,7 +20,9 @@ import { useApp } from '../context/AppContext';
 import { currentStageIndex, stageCountdown } from '../utils/stages';
 import { todayKey, HEB_WEEKDAYS_FULL, HEB_MONTHS } from '../utils/date';
 import { formatValue, unitLabel } from '../utils/fitness';
-import { currentStreak } from '../utils/journal';
+import { currentStreak, rescuableMiss } from '../utils/journal';
+import RescueCard from '../components/RescueCard';
+import StreakPill from '../components/StreakPill';
 import Reveal from '../components/Reveal';
 
 // ============================================================================
@@ -34,7 +36,7 @@ function todayOverline() {
 }
 
 export default function HomeScreen({ navigation }) {
-  const { state, markGoalToday, unmarkGoalToday, setDayWorkout } = useApp();
+  const { state, markGoalToday, unmarkGoalToday, setDayWorkout, setDayMadeUp } = useApp();
   const [editDay, setEditDay] = useState(null);
   if (!state) return null;
 
@@ -47,6 +49,8 @@ export default function HomeScreen({ navigation }) {
   const todays = enabledGoals.filter((g) => g.trainingDays.includes(weekday));
   const doneCount = todays.filter((g) => todayLog?.goals?.[g.id]?.done).length;
   const streak = currentStreak(state.goals, state.weekPlan, state.logs, state.startedAt);
+  // פספוס מהימים האחרונים שעוד אפשר להציל
+  const missKey = rescuableMiss(state.goals, state.weekPlan, state.logs, state.startedAt);
 
   const countdownBig = countdown.hasDate && /^\d+$/.test(countdown.big)
     ? `${ltr(countdown.big)} ימים`
@@ -65,7 +69,11 @@ export default function HomeScreen({ navigation }) {
       action={<IconButton icon="settings-outline" label="הגדרות" onPress={() => navigation.navigate('Settings')} />}
     >
       {/* ---- מה יש היום, לפי התוכנית השבועית ---- */}
-      <Reveal index={0}>
+      {missKey ? (
+        <RescueCard missKey={missKey} plan={state.weekPlan} onRescue={(k) => setDayMadeUp(k, true)} />
+      ) : null}
+
+      <Reveal index={0} follow>
         <TodayPlan
           plan={state.weekPlan}
           onEditDay={(day) => setEditDay({ day, type: workoutFor(state.weekPlan, day) })}
@@ -73,7 +81,7 @@ export default function HomeScreen({ navigation }) {
       </Reveal>
 
       {/* ---- גיבור: טבעת יעדי היום + השלב הבא ---- */}
-      <Reveal index={1}>
+      <Reveal index={1} follow>
         <View style={styles.hero}>
           <Ring progress={todays.length ? doneCount / todays.length : 0} size={112} stroke={10}>
             {todays.length ? (
@@ -90,25 +98,20 @@ export default function HomeScreen({ navigation }) {
               {countdownBig}
             </Text>
             <Text style={text.sub} numberOfLines={2}>{countdown.small}</Text>
-            <View style={styles.pill}>
-              <Ionicons name="flame" size={14} color={colors.gold} />
-              <Text style={[text.captionStrong]}>
-                רצף {ltr(streak)} {streak === 1 ? 'יום' : 'ימים'}
-              </Text>
-            </View>
+            <StreakPill streak={streak} />
           </View>
         </View>
       </Reveal>
 
       {/* ---- מסלול הקבלה ---- */}
-      <Reveal index={2}>
+      <Reveal index={2} follow>
         <Text style={[text.caption, styles.header]}>מסלול הקבלה</Text>
         <View style={styles.pathCard}>
           <StagePath stages={state.stages} />
         </View>
       </Reveal>
 
-      <Reveal index={3}>
+      <Reveal index={3} follow>
         {/* ---- האימון של היום ---- */}
         {todays.length === 0 ? (
           <>
@@ -160,11 +163,6 @@ const styles = StyleSheet.create({
   ringLabel: { textAlign: 'center' },
   side: { flex: 1, minWidth: 0, gap: 3 },
   countdown: { fontFamily: type.family.heavy, fontSize: 22, lineHeight: 28, color: colors.gold, textAlign: dir.start, includeFontPadding: false },
-  pill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
-    backgroundColor: colors.goldSoft, borderRadius: radius.pill,
-    paddingHorizontal: space[3], paddingVertical: 5, marginTop: space[2],
-  },
   header: { paddingHorizontal: space[4], paddingTop: space[6], paddingBottom: 7 },
   pathCard: { backgroundColor: colors.group, borderRadius: radius.card, paddingVertical: space[4], paddingHorizontal: space[2] },
 });

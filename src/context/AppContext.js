@@ -302,6 +302,18 @@ export function AppProvider({ children }) {
     });
   };
 
+  // השלמה: פספסת יום ועשית את האימון אחר כך — נספר ושומר את הרצף.
+  // madeUp = היום שבו השלמת.
+  const setDayMadeUp = (dateKey, on) => {
+    setState((s) => {
+      const log = { ...(s.logs[dateKey] || { trained: false, goals: {} }) };
+      if (on) log.madeUp = todayKey();
+      else delete log.madeUp;
+      return { ...s, logs: { ...s.logs, [dateKey]: log } };
+    });
+    if (on) flash('הרצף ניצל');
+  };
+
   // היום שממנו סופרים פספוסים
   const setStartedAt = (dateKey) => {
     setState((s) => ({ ...s, startedAt: dateKey }));
@@ -374,6 +386,7 @@ export function AppProvider({ children }) {
     unmarkGoalToday,
     setDayTrained,
     setDayExcused,
+    setDayMadeUp,
     setStartedAt,
     // פסיכוטכני
     markPsychToday,

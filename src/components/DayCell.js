@@ -10,6 +10,7 @@ import { ltr } from '../design/rtl';
 // ============================================================================
 //  תא יום בלוח. מצבים נבדלים בצורה ולא רק בצבע:
 //  בוצע = מילוי זהב · פספוס = טבעת אדומה · מוצדק = מילוי כהה + תחבושת
+//  הושלם (השלמה) = טבעת זהב + חץ מעגלי
 //  היום = טבעת שמנת · עתידי/מנוחה = ספרה עמומה.
 //  מתחת לעיגול: אייקון האימון שמתוכנן ביום הזה (משקולת / רץ).
 //  סימון "בוצע" ממלא את העיגול ב-180ms (מצב משתנה — state indication),
@@ -29,7 +30,8 @@ export default function DayCell({ day, status, isToday, planIcon, onPress, label
     d.value = withTiming(t, { duration: duration.toggle, easing: ease.out, ...keep });
   }, [done, reduced]);
 
-  const ring = status === 'missed' ? colors.red : isToday ? colors.ink : status === 'excused' ? colors.ink3 : 'transparent';
+  const madeup = status === 'madeup';
+  const ring = status === 'missed' ? colors.red : madeup ? colors.gold : isToday ? colors.ink : status === 'excused' ? colors.ink3 : 'transparent';
   const rest = status === 'rest' || status === 'future';
   const fallbackFill = status === 'excused' ? colors.bgDeep : 'rgba(0,0,0,0)';
 
@@ -41,12 +43,12 @@ export default function DayCell({ day, status, isToday, planIcon, onPress, label
   const num = useAnimatedStyle(() => ({
     color: interpolateColor(
       d.value, [0, 1],
-      [status === 'missed' ? colors.red : rest ? colors.ink2 : colors.ink, colors.onGold],
+      [status === 'missed' ? colors.red : madeup ? colors.gold : rest ? colors.ink2 : colors.ink, colors.onGold],
     ),
   }));
 
   const press = (v) => { s.value = withTiming(v, { duration: duration.press, easing: ease.out }); };
-  const iconColor = done ? colors.gold : status === 'missed' ? colors.red : isToday ? colors.ink : colors.ink3;
+  const iconColor = done || madeup ? colors.gold : status === 'missed' ? colors.red : isToday ? colors.ink : colors.ink3;
 
   return (
     <Pressable
@@ -58,12 +60,14 @@ export default function DayCell({ day, status, isToday, planIcon, onPress, label
       style={styles.wrap}
     >
       <Animated.View style={[styles.circle, circle]}>
-        <Animated.Text style={[styles.num, (done || isToday) && styles.bold, num]} allowFontScaling={false}>
+        <Animated.Text style={[styles.num, (done || isToday || madeup) && styles.bold, num]} allowFontScaling={false}>
           {ltr(day)}
         </Animated.Text>
       </Animated.View>
       <View style={styles.iconRow}>
-        {status === 'excused' ? (
+        {madeup ? (
+          <Ionicons name="refresh" size={11} color={colors.gold} />
+        ) : status === 'excused' ? (
           <Ionicons name="bandage-outline" size={11} color={colors.ink3} />
         ) : planIcon ? (
           <Ionicons name={planIcon} size={11} color={iconColor} />

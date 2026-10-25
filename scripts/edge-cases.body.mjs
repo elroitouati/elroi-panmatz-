@@ -152,6 +152,26 @@ t('שבירת רצף מאפסת', () => { const r = J.milestoneCheck(2, 14); ok(
 t('אחרי שבירה 7 נחגג שוב', () => ok(J.milestoneCheck(7, J.milestoneCheck(2, 14).last).celebrate === 7));
 t('60 ו-90 הם אבני דרך, 45 לא', () => ok(J.isMilestone(60) && J.isMilestone(90) && !J.isMilestone(45)));
 
+console.log('--- השלמה ---');
+{
+  const P = ['strength', 'run', 'rest', 'strength', 'run', 'strength', 'run'];
+  const T = '2026-10-08'; // חמישי
+  const logs = { '2026-10-04': { trained: true }, '2026-10-07': { trained: true } }; // ב' פוספס
+  t('בלי השלמה הרצף נשבר', () => ok(J.currentStreak([], P, logs, '2026-10-04', T) === 1));
+  const fixed = { ...logs, '2026-10-05': { madeUp: '2026-10-06' } };
+  t('השלמה שומרת את הרצף ונספרת', () => ok(J.currentStreak([], P, fixed, '2026-10-04', T) === 3));
+  t('השלמה = madeup', () => ok(J.dayStatus({ goals: [], plan: P, log: fixed['2026-10-05'], key: '2026-10-05', today: T }) === 'madeup'));
+  t('השלמה נספרת באימונים ובעמידה', () => {
+    const s = J.rangeStats(J.weekKeys(T), [], P, fixed, '2026-10-04', T);
+    ok(s.met === 3 && s.due === 3 && s.madeUp === 1, JSON.stringify(s));
+  });
+  t('אפשר להשלים אתמול', () => ok(J.canMakeUp('2026-10-07', T)));
+  t('אי אפשר להשלים את היום', () => ok(!J.canMakeUp(T, T)));
+  t('אי אפשר להשלים אחרי 3 ימים', () => ok(!J.canMakeUp('2026-10-04', T)));
+  t('הפספוס להצלה = שני', () => ok(J.rescuableMiss([], P, logs, '2026-10-04', T) === '2026-10-05'));
+  t('אחרי השלמה אין מה להציל', () => ok(J.rescuableMiss([], P, fixed, '2026-10-04', T) === null));
+}
+
 console.log('\n' + pass + ' עברו, ' + fail + ' נכשלו');
 return fail === 0;
 }
