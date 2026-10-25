@@ -4,6 +4,7 @@ import Screen from '../components/Screen';
 import IconButton from '../components/IconButton';
 import Toggle from '../components/Toggle';
 import { Section, Row } from '../components/Group';
+import SyncSection from '../components/SyncSection';
 import DateSheet from '../sheets/DateSheet';
 import TimeSheet from '../sheets/TimeSheet';
 import { colors, space } from '../design/tokens';
@@ -122,8 +123,10 @@ export default function SettingsScreen({ navigation }) {
         </Section>
       ) : null}
 
+      <SyncSection />
+
       <Text style={[text.caption, styles.footnote]}>
-        הנתונים נשמרים על המכשיר הזה בלבד. אין חשבון ואין שרת.
+        הנתונים נשמרים על המכשיר הזה. בלי התחברות לסנכרון — אין חשבון ואין שרת.
       </Text>
 
       <TimeSheet

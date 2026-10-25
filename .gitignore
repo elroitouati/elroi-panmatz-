@@ -25,3 +25,7 @@ yarn-debug.*
 yarn-error.*
 .idea/
 .vscode/
+
+# מפתחות Supabase — נשארים רק אצלך (ונשלחים ל-EAS דרך .easignore)
+.env
+.env.local
