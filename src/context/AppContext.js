@@ -17,6 +17,8 @@ import {
   ensurePermissions,
   scheduleDailyTrainingReminders,
   cancelTrainingReminders,
+  scheduleStageReminders,
+  cancelStageReminders,
   sendReinforcement,
 } from '../notifications';
 
@@ -102,6 +104,23 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (state && loadedRef.current) saveState(state);
   }, [state]);
+
+  // תזכורות לשלבי הקבלה (ערב לפני) — מתעדכנות כשתאריך משתנה
+  useEffect(() => {
+    if (!state) return;
+    (async () => {
+      if (!state.settings.notificationsEnabled) {
+        await cancelStageReminders(state.stages);
+        return;
+      }
+      if (!(await ensurePermissions())) return;
+      await scheduleStageReminders(state.stages);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state?.settings.notificationsEnabled,
+    (state?.stages || []).map((s) => `${s.id}:${s.date}:${s.completed ? 1 : 0}`).join('|'),
+  ]);
 
   // סנכרון תזכורות אימון עם ימי האימון והעדפות
   useEffect(() => {

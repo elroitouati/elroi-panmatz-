@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { reminderFor } from './utils/reminders';
+import { stageReminderTime } from './utils/stages';
 import { WORKOUTS, workoutFor } from './utils/weekPlan';
 
 // התראות פוש מקומיות בלבד — בלי שרת. כולל תזכורת אימון וחיזוקים על התקדמות.
@@ -69,6 +70,34 @@ export async function scheduleDailyTrainingReminders(weekdays, settings, plan) {
   } catch (e) {
     console.warn('קביעת תזכורות נכשלה', e);
     return [];
+  }
+}
+
+// תזכורות לשלבי הקבלה — ערב לפני כל שלב עם תאריך (למשל: "מחר: יום פתוח").
+export async function scheduleStageReminders(stages) {
+  try {
+    await cancelStageReminders(stages);
+    for (const stage of stages) {
+      const when = stageReminderTime(stage);
+      if (!when) continue;
+      await Notifications.scheduleNotificationAsync({
+        identifier: `stage-${stage.id}`,
+        content: {
+          title: `מחר: ${stage.name}`,
+          body: stage.note || 'שלב במסלול הקבלה לפנמ"צ.',
+          color: '#f0c239',
+        },
+        trigger: { date: when },
+      });
+    }
+  } catch (e) {
+    console.warn('קביעת תזכורות שלבים נכשלה', e);
+  }
+}
+
+export async function cancelStageReminders(stages) {
+  for (const stage of stages || []) {
+    await Notifications.cancelScheduledNotificationAsync(`stage-${stage.id}`).catch(() => {});
   }
 }
 

@@ -19,7 +19,7 @@ const ICONS = {
   'היום': 'home',
   'כושר': 'barbell',
   'הלוח שלי': 'calendar',
-  'פסיכוטכני': 'bulb',
+  'מבחן': 'reader',
 };
 
 export default function TabBar({ state, navigation, position }) {

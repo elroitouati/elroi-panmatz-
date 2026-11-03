@@ -46,3 +46,12 @@ export function stageCountdown(stage) {
   // בלי תאריך אמיתי — מציגים רק את התווית, בלי ספירה מדויקת; הפירוט מה-note
   return { big: stage.defaultLabel, small: stage.note || 'התאריך המדויק יעודכן בהגדרות', hasDate: false };
 }
+
+// תזכורת לשלב: ערב לפני, ב-20:00. null אם אין תאריך, השלב הושלם או שהזמן עבר.
+export const STAGE_REMINDER_HOUR = 20;
+export function stageReminderTime(stage, now = new Date()) {
+  if (!stage?.date || stage.completed) return null;
+  const [y, m, d] = stage.date.split('-').map(Number);
+  const t = new Date(y, m - 1, d - 1, STAGE_REMINDER_HOUR, 0, 0);
+  return t > now ? t : null;
+}

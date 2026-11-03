@@ -81,7 +81,7 @@ function Tabs() {
       <Tab.Screen name="היום" component={HomeScreen} />
       <Tab.Screen name="כושר" component={FitnessScreen} />
       <Tab.Screen name="הלוח שלי" component={CalendarScreen} />
-      <Tab.Screen name="פסיכוטכני" component={PsychScreen} />
+      <Tab.Screen name="מבחן" component={PsychScreen} />
     </Tab.Navigator>
   );
 }

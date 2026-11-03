@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
@@ -7,6 +7,8 @@ import Button from '../components/Button';
 import Stepper from '../components/Stepper';
 import Fraction from '../components/Fraction';
 import Reveal from '../components/Reveal';
+import Segmented from '../components/Segmented';
+import EmptyState from '../components/EmptyState';
 import { Section, Row } from '../components/Group';
 import { colors, radius, space } from '../design/tokens';
 import { text } from '../design/typography';
@@ -16,11 +18,22 @@ import { useApp } from '../context/AppContext';
 import { todayKey, isInThisWeek } from '../utils/date';
 
 // ============================================================================
-//  פסיכוטכני. אותה שפה כמו "היום": טבעת שבועית, פעולה אחת, ורשימת אתרים.
+//  מבחן מקוון: פסיכוטכני · מתמטיקה · אנגלית · עברית.
+//  בורר מקטעים למעלה. בפסיכוטכני — טבעת שבועית, פעולה אחת ואתרי תרגול.
+//  שאר המקצועות ריקים עד שיהיה חומר מדויק למבחן.
 // ============================================================================
+
+const SUBJECTS = [
+  { value: 'psych', label: 'פסיכוטכני' },
+  { value: 'math', label: 'מתמטיקה' },
+  { value: 'english', label: 'אנגלית' },
+  { value: 'hebrew', label: 'עברית' },
+];
+const EMPTY_ICON = { math: 'calculator-outline', english: 'language-outline', hebrew: 'book-outline' };
 
 export default function PsychScreen() {
   const { state, markPsychToday, unmarkPsychToday, setPsychWeeklyTarget } = useApp();
+  const [subject, setSubject] = useState('psych');
   if (!state) return null;
 
   const doneToday = state.psych.practiceDays.includes(todayKey());
@@ -34,8 +47,22 @@ export default function PsychScreen() {
   };
 
   return (
-    <Screen title="פסיכוטכני" overline="הכנה קוגניטיבית">
+    <Screen title="מבחן מקוון" overline="פסיכוטכני · מתמטיקה · אנגלית · עברית">
       <Reveal index={0}>
+        <Segmented options={SUBJECTS} value={subject} onChange={setSubject} />
+      </Reveal>
+
+      {subject !== 'psych' ? (
+        <View style={styles.hero}>
+          <EmptyState
+            icon={EMPTY_ICON[subject]}
+            title={`עדיין אין חומר ל${SUBJECTS.find((s) => s.value === subject).label}`}
+            body="כשיהיה חומר מדויק למבחן, נוסיף כאן אתרי תרגול ויעד שבועי."
+          />
+        </View>
+      ) : (
+      <>
+      <Reveal index={1}>
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <Ring progress={target ? week / target : 0} size={112} stroke={10}>
@@ -44,7 +71,7 @@ export default function PsychScreen() {
           </Ring>
 
           <View style={styles.side}>
-            <Text style={text.caption}>יעד שבועי</Text>
+            <Text style={text.caption}>יעד שבועי · פסיכוטכני</Text>
             <Text style={text.title} numberOfLines={1}>{ltr(target)} תרגולים</Text>
             <View style={styles.targetRow}>
               <Stepper
@@ -70,7 +97,7 @@ export default function PsychScreen() {
 
       </Reveal>
 
-      <Reveal index={1}>
+      <Reveal index={2}>
       <Section title="אתרי תרגול" footer="הקישורים נפתחים בדפדפן.">
         {state.psych.links.map((link) => (
           <Row
@@ -84,6 +111,8 @@ export default function PsychScreen() {
         ))}
       </Section>
       </Reveal>
+      </>
+      )}
     </Screen>
   );
 }

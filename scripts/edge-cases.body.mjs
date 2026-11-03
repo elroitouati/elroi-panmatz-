@@ -92,6 +92,15 @@ t('מיזוג שלבים — תאריך ידוע גובר', () => {
   ok(m[0].date === '2026-11-22');
 });
 
+t('תזכורת שלב: ערב לפני ב-20:00', () => {
+  const r = S.stageReminderTime({ date: '2026-11-22' }, new Date(2026, 10, 3));
+  ok(r && r.getDate() === 21 && r.getMonth() === 10 && r.getHours() === 20, String(r));
+});
+t('תזכורת שלב: אין אם הזמן עבר', () => ok(S.stageReminderTime({ date: '2026-11-22' }, new Date(2026, 10, 21, 21)) === null));
+t('תזכורת שלב: אין לשלב שהושלם / בלי תאריך', () => ok(
+  S.stageReminderTime({ date: '2026-12-01', completed: true }, new Date(2026, 10, 3)) === null &&
+  S.stageReminderTime({ date: null }, new Date(2026, 10, 3)) === null));
+
 console.log('--- לוח שנה ---');
 t('כל חודש מתחלק לשבועות שלמים', () => {
   for (let m = 0; m < 12; m++) {
