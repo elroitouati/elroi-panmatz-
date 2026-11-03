@@ -6,8 +6,10 @@ import {
   DEFAULT_PSYCH_LINKS,
   DEFAULT_PSYCH_WEEKLY_TARGET,
   DEFAULT_WEEK_PLAN,
+  STAGES_VERSION,
 } from '../data/defaults';
 import { todayKey } from '../utils/date';
+import { mergeStages } from '../utils/stages';
 import { reminderDays } from '../utils/weekPlan';
 import { currentStreak, milestoneCheck } from '../utils/journal';
 import { bumpedCurrent, loweredCurrent, atStart, reachedFinal, isNewPersonalBest } from '../utils/fitness';
@@ -22,6 +24,7 @@ const AppContext = createContext(null);
 
 function freshState() {
   return {
+    stagesVersion: STAGES_VERSION,
     startedAt: todayKey(), // היום הראשון באפליקציה — לפניו אין "פספוס"
     stages: DEFAULT_STAGES.map((s) => ({ ...s })),
     goals: DEFAULT_GOALS.map((g) => ({ ...g, trainingDays: [...g.trainingDays], history: [] })),
@@ -49,7 +52,11 @@ function normalize(loaded) {
   const known = [...Object.keys(loaded.logs || {}), ...(loaded.psych?.practiceDays || [])].sort();
   return {
     startedAt: loaded.startedAt || known[0] || base.startedAt,
-    stages: Array.isArray(loaded.stages) && loaded.stages.length ? loaded.stages : base.stages,
+    // גרסת שלבים חדשה (פרטים אמיתיים מההרשמה) — ממזגים, ושומרים תאריכים שהוזנו
+    stages: Array.isArray(loaded.stages) && loaded.stages.length
+      ? ((loaded.stagesVersion || 1) < STAGES_VERSION ? mergeStages(loaded.stages, base.stages) : loaded.stages)
+      : base.stages,
+    stagesVersion: STAGES_VERSION,
     goals: Array.isArray(loaded.goals) && loaded.goals.length ? loaded.goals : base.goals,
     weekPlan: Array.isArray(loaded.weekPlan) && loaded.weekPlan.length === 7 ? loaded.weekPlan : base.weekPlan,
     logs: loaded.logs || {},

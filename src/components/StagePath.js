@@ -5,16 +5,18 @@ import { colors, radius, space } from '../design/tokens';
 import { text } from '../design/typography';
 import { stageStatus, currentStageIndex } from '../utils/stages';
 
-// מסלול הקבלה: חמש נקודות על קו. 'row' מתהפך ב-RTL — השלב הראשון מימין.
+// מסלול הקבלה: נקודה לכל שלב על קו (7 שלבים — תוויות קצרות, עד שתי שורות). 'row' מתהפך ב-RTL — השלב הראשון מימין.
 // שלב שעבר: מילוי זהב עם ווי. נוכחי: זהב עם הילה ואייקון. עתידי: מתאר בלבד.
 const SHORT = {
   registration: 'הרשמה',
-  psychotechnical: 'פסיכוטכני',
+  openday: 'יום פתוח',
+  psychotechnical: 'מבחן',
   fieldday: 'יום שדה',
-  medical: 'רפואיות',
-  summercourse: 'קורס קיץ',
+  medical: 'רפואי',
+  summercourse: 'הכנה',
+  start: 'פתיחה',
 };
-const DOT = 32;
+const DOT = 28;
 
 export default function StagePath({ stages }) {
   const cur = currentStageIndex(stages);
@@ -32,13 +34,13 @@ export default function StagePath({ stages }) {
           <View key={s.id} style={styles.col}>
             <View style={[styles.halo, st === 'current' && styles.haloOn]}>
               <View style={[styles.dot, st !== 'upcoming' && styles.dotOn]}>
-                {st === 'done' ? <Ionicons name="checkmark" size={16} color={colors.onGold} /> : null}
-                {st === 'current' ? <Ionicons name={s.icon} size={15} color={colors.onGold} /> : null}
+                {st === 'done' ? <Ionicons name="checkmark" size={14} color={colors.onGold} /> : null}
+                {st === 'current' ? <Ionicons name={s.icon} size={14} color={colors.onGold} /> : null}
               </View>
             </View>
             <Text
               style={[text.caption, styles.label, st === 'current' && styles.labelOn]}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {SHORT[s.id] || s.name}
             </Text>
@@ -51,10 +53,10 @@ export default function StagePath({ stages }) {
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row' },
-  line: { position: 'absolute', top: 6 + DOT / 2 - 1, height: 2, backgroundColor: colors.track },
+  line: { position: 'absolute', top: 5 + DOT / 2 - 1, height: 2, backgroundColor: colors.track },
   lineDone: { backgroundColor: colors.gold },
   col: { flex: 1, alignItems: 'center', gap: space[2] },
-  halo: { width: DOT + 12, height: DOT + 12, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  halo: { width: DOT + 10, height: DOT + 10, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   haloOn: { backgroundColor: colors.goldSoft },
   dot: {
     width: DOT, height: DOT, borderRadius: DOT / 2, borderWidth: 2, borderColor: colors.ink3,

@@ -3,7 +3,19 @@ import { daysUntil } from './date';
 // שלב נחשב "הושלם" רק אם הוזן לו תאריך אמיתי שכבר עבר.
 // בלי תאריך אמיתי אי אפשר לדעת שעבר — לכן הוא עדיין רלוונטי.
 export function stageIsPast(stage) {
+  if (stage.completed) return true; // סומן כהושלם (למשל: נרשמת)
   return stage.date != null && daysUntil(stage.date) < 0;
+}
+
+// מיזוג שלבים שמורים עם רשימת שלבים חדשה (עדכון גרסה):
+// הסדר, השמות והפרטים מהרשימה החדשה; תאריך שהמשתמש הזין נשמר,
+// אלא אם ברשימה החדשה יש תאריך ידוע.
+export function mergeStages(saved, defaults) {
+  const byId = Object.fromEntries((saved || []).map((s) => [s.id, s]));
+  return defaults.map((d) => {
+    const old = byId[d.id];
+    return { ...d, date: d.date ?? old?.date ?? null };
+  });
 }
 
 // אינדקס השלב הנוכחי = השלב הראשון שעדיין לא עבר.
@@ -31,6 +43,6 @@ export function stageCountdown(stage) {
     if (d === 0) return { big: 'היום', small: 'זה קורה עכשיו', hasDate: true };
     return { big: 'עבר', small: 'השלב הושלם', hasDate: true };
   }
-  // בלי תאריך אמיתי — מציגים רק את התווית החודשית, בלי ספירה מדויקת
-  return { big: stage.defaultLabel, small: 'התאריך המדויק יעודכן בהגדרות', hasDate: false };
+  // בלי תאריך אמיתי — מציגים רק את התווית, בלי ספירה מדויקת; הפירוט מה-note
+  return { big: stage.defaultLabel, small: stage.note || 'התאריך המדויק יעודכן בהגדרות', hasDate: false };
 }

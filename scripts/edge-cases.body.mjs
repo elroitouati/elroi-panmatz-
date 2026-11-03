@@ -77,6 +77,21 @@ t('הכל עבר — נשארים על האחרון', () => {
   ok(S.currentStageIndex(all) === all.length - 1);
 });
 
+t('שלב שהושלם נחשב שעבר גם בלי תאריך', () => {
+  ok(S.currentStageIndex([{ ...stages[0], completed: true }, stages[1]]) === 1);
+});
+t('בלי תאריך — הפירוט מגיע מה-note', () => {
+  ok(S.stageCountdown({ ...stages[1], note: 'פסיכוטכני · מתמטיקה' }).small === 'פסיכוטכני · מתמטיקה');
+});
+t('מיזוג שלבים שומר תאריך שהמשתמש הזין', () => {
+  const m = S.mergeStages([{ id: 'b', date: '2026-12-20' }], [{ id: 'a', date: '2026-11-22' }, { id: 'b', date: null }]);
+  ok(m.length === 2 && m[0].date === '2026-11-22' && m[1].date === '2026-12-20');
+});
+t('מיזוג שלבים — תאריך ידוע גובר', () => {
+  const m = S.mergeStages([{ id: 'a', date: '2026-01-01' }], [{ id: 'a', date: '2026-11-22' }]);
+  ok(m[0].date === '2026-11-22');
+});
+
 console.log('--- לוח שנה ---');
 t('כל חודש מתחלק לשבועות שלמים', () => {
   for (let m = 0; m < 12; m++) {

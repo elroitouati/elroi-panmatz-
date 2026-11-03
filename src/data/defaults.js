@@ -2,46 +2,68 @@
 // נקודת פתיחה אמיתית: 0-2 עליות מתח ברצף, ריצת 2 ק"מ מתחת ל-10 דקות.
 // דגש חזק על מתח (החולשה), עדינות בריצה (כבר חוזק).
 
-// חמשת שלבי הקבלה לפנמ"צ, לפי הסדר הכרונולוגי
+// שלבי הקבלה לפנמ"צ, לפי הסדר הכרונולוגי.
+// עודכן לפי הפרטים מההרשמה (נובמבר 2026): נרשמת, יום פתוח ב-22.11,
+// מבחן מקוון (מועדים ייפתחו), חצי יום שדה בפנימייה, הכנה בקיץ 22.6–7.7,
+// ותחילת הלימודים בשבוע האחרון של אוגוסט.
+export const STAGES_VERSION = 2;
+
 export const DEFAULT_STAGES = [
   {
     id: 'registration',
     name: 'הרשמה',
     icon: 'create-outline',
     defaultLabel: 'נובמבר 2026',
-    note: 'ההרשמה נפתחת בנובמבר',
-    date: null, // ISO day key כשנודע התאריך האמיתי
+    note: 'נרשמת לפנמ"צ',
+    completed: true, // ההרשמה בוצעה
+    date: '2026-11-03',
+  },
+  {
+    id: 'openday',
+    name: 'יום פתוח',
+    icon: 'people-outline',
+    defaultLabel: '22 בנובמבר 2026',
+    note: 'יום פתוח בפנימייה',
+    date: '2026-11-22',
   },
   {
     id: 'psychotechnical',
-    name: 'מבחן פסיכוטכני',
-    icon: 'bulb-outline',
-    defaultLabel: 'דצמבר 2026',
-    note: 'מבחן קוגניטיבי',
-    date: null,
+    name: 'מבחן מקוון',
+    icon: 'laptop-outline',
+    defaultLabel: 'המועד ייפתח בקרוב',
+    note: 'פסיכוטכני · מתמטיקה · אנגלית · עברית',
+    date: null, // ISO day key כשנודע התאריך האמיתי
   },
   {
     id: 'fieldday',
-    name: 'יום שדה',
+    name: 'חצי יום שדה',
     icon: 'flag-outline',
-    defaultLabel: 'ינואר 2027',
-    note: 'מבחני כושר ומשימות קבוצתיות',
+    defaultLabel: 'אחרי המבחן',
+    note: 'חצי יום שדה בפנימייה',
     date: null,
   },
   {
     id: 'medical',
     name: 'בדיקות רפואיות',
     icon: 'medkit-outline',
-    defaultLabel: 'פברואר 2027',
+    defaultLabel: 'מועד לא ידוע',
     note: 'התאמה רפואית',
     date: null,
   },
   {
     id: 'summercourse',
-    name: 'קורס הכנה בקיץ',
+    name: 'הכנה בקיץ',
     icon: 'sunny-outline',
-    defaultLabel: 'קיץ 2027',
-    note: 'שלב אחרון לפני הקבלה',
+    defaultLabel: '22.6–7.7.2027',
+    note: 'הכנה בפנימייה עד 7 ביולי',
+    date: '2027-06-22',
+  },
+  {
+    id: 'start',
+    name: 'תחילת הלימודים',
+    icon: 'school-outline',
+    defaultLabel: 'סוף אוגוסט 2027',
+    note: 'מתחילים בשבוע האחרון של אוגוסט',
     date: null,
   },
 ];

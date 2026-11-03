@@ -45,8 +45,9 @@ export default function SettingsScreen({ navigation }) {
           <Row
             key={stage.id}
             title={stage.name}
-            value={stage.date ? ltr(formatHebDate(stage.date)) : `${stage.defaultLabel} · משוער`}
-            valueStyle={stage.date ? styles.gold : null}
+            subtitle={stage.note}
+            value={stage.completed ? 'הושלם' : stage.date ? ltr(formatHebDate(stage.date)) : stage.defaultLabel}
+            valueStyle={stage.date || stage.completed ? styles.gold : null}
             chevron
             onPress={() => setEditStage(stage)}
             accessibilityLabel={`עריכת תאריך ל${stage.name}`}
