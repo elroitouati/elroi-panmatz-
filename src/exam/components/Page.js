@@ -65,6 +65,8 @@ export default function Page({ title, over, children, action }) {
         <Text style={[t.title, { marginTop: over ? 2 : 10, marginBottom: 18 }]} accessibilityRole="header">{title}</Text>
         {children}
       </ScrollView>
+      {/* רקע מאחורי שורת הסטטוס — כשגוללים, התוכן לא מתערבב עם השעה והסוללה */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: c.paper }} />
     </View>
   );
 }

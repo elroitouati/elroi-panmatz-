@@ -80,6 +80,8 @@ export default function DayCell({ day, status, isToday, planIcon, onPress, label
       <View style={styles.examRow}>
         {exam?.kind === 'sim' && (exam.status === 'future' || exam.status === 'today') ? (
           <Ionicons name="stopwatch" size={10} color={EXAM_BLUE} />
+        ) : exam?.status === 'excused' ? (
+          <Ionicons name="bandage" size={9} color={EXAM_BLUE} />
         ) : exam?.status === 'done' ? (
           <View style={[styles.dot, { backgroundColor: EXAM_BLUE, borderColor: EXAM_BLUE }]} />
         ) : exam?.status === 'partial' ? (

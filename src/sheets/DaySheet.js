@@ -30,12 +30,13 @@ const STATUS = {
 
 const EXAM_STATUS = {
   done: 'כל המשימות הושלמו', partial: 'חלק מהמשימות', missed: 'לא נעשה — המערכת משלימה בימים הבאים',
+  excused: 'יום מוצדק — החומר מתפזר על הימים הבאים',
   today: 'היום', future: 'מתוכנן', off: 'יום חופש מפסיכוטכני',
 };
 const EXAM_BLUE = '#9DBCE6';
 const MODE = { weekly: 'בדיקה שבועית', sim: 'סימולציה מלאה', diagnostic: 'אבחון פתיחה', daily: 'תרגול מעורב', errors: 'חזרה על טעויות', topic: 'תרגול נושא' };
 
-export default function DaySheet({ target, state, exam, onClose, onSetTrained, onSetExcused, onSetMadeUp }) {
+export default function DaySheet({ target, state, exam, onClose, onSetTrained, onSetExcused, onSetMadeUp, onExamExcused }) {
   const last = useRef(target);
   if (target) last.current = target;
   const t = last.current;
@@ -107,6 +108,14 @@ export default function DaySheet({ target, state, exam, onClose, onSetTrained, o
               leading={<Ionicons name={exam.done?.[tk.id] ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={EXAM_BLUE} />}
             />
           ))}
+          {['missed', 'partial', 'today', 'excused'].includes(exam.status) && onExamExcused ? (
+            <Row
+              title={exam.excused ? 'ביטול ההצדקה בפסיכוטכני' : 'הצדקה בפסיכוטכני (מחלה / אירוע)'}
+              subtitle={exam.excused ? null : 'לא ייחשב פספוס — החומר יתפזר על הימים הבאים'}
+              leading={<Ionicons name={exam.excused ? 'close-circle-outline' : 'bandage-outline'} size={22} color={EXAM_BLUE} />}
+              onPress={() => { haptic.selection(); onExamExcused(t.key, !exam.excused); onClose(); }}
+            />
+          ) : null}
           {(exam.sessions || []).filter((s) => s.mode === 'weekly' || s.mode === 'sim' || s.mode === 'diagnostic').map((s) => (
             <Row
               key={s.id}

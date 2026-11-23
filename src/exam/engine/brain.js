@@ -209,6 +209,12 @@ export function isOffDay(state, day) {
   return (st.offDays || []).includes(day) || (st.weeklyOff || []).includes(weekdayOf(day));
 }
 
+// יום מוצדק (מחלה / אירוע): לא נחשב פספוס בלוח — אבל החומר שלו עדיין
+// נכנס לחוב ההשלמה ומתפזר על הימים הבאים (בניגוד ליום חופש, שאין בו חומר).
+export function isExcusedDay(state, day) {
+  return (state.settings?.excusedDays || []).includes(day);
+}
+
 const MAX_EXTRA = 15;   // תוספת השלמה מקסימלית ליום (דקות)
 const MAX_DAY = 45;     // תקרת יום רגיל
 const CATCH_WINDOW = 14;
@@ -410,6 +416,7 @@ export function examDay(state, day, today) {
   if (!state) return { status: 'none' };
   if (day < startOf(state)) return { status: 'none' };
   if (isOffDay(state, day)) return { status: 'off' };
+  const excused = isExcusedDay(state, day);
   const saved = state.daily?.[day];
   const plan = saved?.plan || (day >= today ? planForDay(state, day, { noCatch: day !== today }) : null);
   const kind = plan?.sim ? 'sim' : plan?.weekly ? 'weekly' : isSimDay(state, day) ? 'sim' : weekdayOf(day) === 5 ? 'weekly' : null;
@@ -419,6 +426,7 @@ export function examDay(state, day, today) {
   const sessions = (state.sessions || []).filter((s) => s.d === day && s.complete);
   if (day > today) return { status: 'future', kind, tasks, done, sessions };
   if (tasks.length && n === tasks.length) return { status: 'done', kind, tasks, done, sessions };
+  if (excused) return { status: 'excused', kind, tasks, done, sessions, excused: true };
   if (day === today) return { status: 'today', kind, tasks, done, sessions };
   if (n > 0) return { status: 'partial', kind, tasks, done, sessions };
   return { status: 'missed', kind, tasks, done, sessions };
@@ -429,7 +437,7 @@ export function examMonthStats(state, keys, today) {
   for (const k of keys) {
     if (!k || k > today) continue;
     const s = examDay(state, k, today).status;
-    if (s === 'none' || s === 'off') continue;
+    if (s === 'none' || s === 'off' || s === 'excused') continue;
     if (k === today && s !== 'done') continue;
     due++;
     if (s === 'done') done++;

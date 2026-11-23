@@ -3,7 +3,7 @@ import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { keyOf, addDays } from './engine/time';
 import { review as srsReview, isDue } from './engine/srs';
-import { planForDay, readiness, trimAttempts, wordDeck, startOf, isOffDay } from './engine/brain';
+import { planForDay, readiness, trimAttempts, wordDeck, startOf, isOffDay, isExcusedDay } from './engine/brain';
 import { scheduleStudyReminders, scheduleEvening } from './notify';
 import { mergeExam } from './engine/merge';
 import { attachExamSync, notifyExamChanged } from './examSync';
@@ -40,6 +40,7 @@ export function defaultExamState(today = keyOf(), resetAt = 0) {
       offDays: [],
       weeklyOff: [6],   // שבת — יום חופש קבוע מפסיכוטכני
       onDays: [],       // ימי חופש שבחרת בכל זאת להתאמן בהם
+      excusedDays: [],  // ימים מוצדקים (מחלה / אירוע) — החומר מתפזר הלאה
     },
     attempts: [],
     sessions: [],
@@ -134,7 +135,7 @@ export function ExamProvider({ children }) {
   // תזכורת ערב — כשההתקדמות היומית משתנה
   const dayData = state?.daily?.[today];
   const remaining = dayData?.plan ? dayData.plan.tasks.filter((t) => !dayData.done?.[t.id]) : [];
-  const offToday = state ? isOffDay(state, today) : false;
+  const offToday = state ? isOffDay(state, today) || isExcusedDay(state, today) : false;
   const eveningKey = state ? JSON.stringify([today, remaining.map((t) => t.id), state.settings.evening, state.settings.notify, offToday]) : '';
   useEffect(() => {
     if (!state || !dayData?.plan || !NATIVE) return;
@@ -263,12 +264,21 @@ export function ExamProvider({ children }) {
     });
   }, []);
 
+  // הצדקה ליום (כמו באימונים): לא נחשב פספוס; החומר עדיין מתפזר על הימים הבאים
+  const setExcused = useCallback((day, on) => {
+    setState((s) => {
+      const set = new Set(s.settings.excusedDays || []);
+      if (on) set.add(day); else set.delete(day);
+      return { ...s, settings: { ...s.settings, excusedDays: [...set].sort() }, settingsAt: Date.now() };
+    });
+  }, []);
+
   const saveSim = useCallback((sim) => setState((s) => ({ ...s, activeSim: sim, simAt: Date.now() })), []);
 
   const resetExam = useCallback(() => setState(defaultExamState(keyOf(), Date.now())), []);
 
   const value = useMemo(() => ({
-    state, today, markTask, recordSession, reviewWord, undoWord, setLesson, setErrorReason, updateSettings, setOffToday, saveSim, resetExam,
+    state, today, markTask, recordSession, reviewWord, undoWord, setLesson, setErrorReason, updateSettings, setOffToday, setExcused, saveSim, resetExam,
   }), [state, today]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -295,5 +305,6 @@ export function useToday() {
   const plan = saved?.plan || planForDay(state, today);
   const done = saved?.done || {};
   const off = !!plan.off;
-  return { plan, done, off, finished: plan.tasks.filter((t) => done[t.id]).length, total: plan.tasks.length };
+  const excused = isExcusedDay(state, today);
+  return { plan, done, off, excused, finished: plan.tasks.filter((t) => done[t.id]).length, total: plan.tasks.length };
 }

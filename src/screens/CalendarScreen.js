@@ -200,6 +200,7 @@ export default function CalendarScreen() {
         target={openDay}
         state={state}
         exam={openDay && exam ? examDay(exam, openDay.key, today) : null}
+        onExamExcused={(day, on) => ex?.setExcused(day, on)}
         onClose={() => setOpenDay(null)}
         onSetTrained={setDayTrained}
         onSetExcused={setDayExcused}

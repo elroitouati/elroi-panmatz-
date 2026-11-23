@@ -22,10 +22,10 @@ import { dir } from '../../design/rtl';
 
 export default function ExamToday({ navigation }) {
   const { c, t } = useX();
-  const { state, today, setOffToday } = useExam();
+  const { state, today, setOffToday, setExcused } = useExam();
   const day = useToday();
   if (!state || !day) return null;
-  const { plan, done, off } = day;
+  const { plan, done, off, excused } = day;
   const next = plan.tasks.find((x) => !done[x.id]);
   const allDone = plan.tasks.length > 0 && !next;
   // המונים בכרטיס — רק מה שעוד נשאר היום
@@ -42,6 +42,7 @@ export default function ExamToday({ navigation }) {
   const notStarted = !!plan.notStarted;
   const startIn = notStarted ? dayDiff(today, startOf(state)) : 0;
   const heroTitle = notStarted ? (startIn === 1 ? 'מתחילים מחר' : `מתחילים ב־${fmtDay(startOf(state))}`) : off ? 'היום חופש' : allDone ? 'סיימת את היום' : plan.sim ? 'יום סימולציה' : plan.weekly ? 'בדיקה שבועית' : !state.diagnosticDone ? 'נתחיל באבחון' : 'האימון של היום';
+  const heroNote = excused && !off && !notStarted && !allDone ? 'יום מוצדק — לא נחשב פספוס. מה שלא תספיק היום יתפזר על הימים הבאים.' : null;
   const heroText = notStarted ? 'התוכנית היומית מתחילה אז, באבחון פתיחה קצר. עד אז אפשר להציץ בשיעורים ולתרגל חופשי — זה לא חובה.' : off ? 'מנוחה היא חלק מהתוכנית. מחר ממשיכים.'
     : allDone ? 'כל המשימות הושלמו. המערכת כבר עדכנה את התוכנית למחר.'
     : plan.sim ? '180 שאלות בשמונה פרקים מתוזמנים — בדיוק כמו ביום המבחן.'
@@ -72,6 +73,8 @@ export default function ExamToday({ navigation }) {
               {wCount ? <Meta big={wCount} label="מילים" /> : null}
             </View>
           ) : null}
+          {heroNote ? <Text style={{ fontFamily: font.m, fontSize: 16, lineHeight: 23, color: ON_FLOW.ink, marginTop: 10, textAlign: dir.start }}>{heroNote}</Text> : null}
+          {heroNote ? <Btn variant="flowLine" label="ביטול ההצדקה" onPress={() => setExcused(today, false)} style={{ marginTop: 14 }} /> : null}
           {!off && next ? <Btn variant="flow" label={plan.sim && state.activeSim ? 'להמשיך את הסימולציה' : left.length < plan.tasks.length ? 'להמשיך' : 'התחל'} icon="play" onPress={() => startTask(navigation, next, state)} style={{ marginTop: 20 }} /> : null}
           {off ? <Btn variant="flowLine" label="בכל זאת להתאמן היום" onPress={() => setOffToday(false)} style={{ marginTop: 20 }} /> : null}
           {notStarted ? <Btn variant="flowLine" label="להציץ בתרגול" icon="grid-outline" onPress={() => navigation.navigate('תרגול')} style={{ marginTop: 20 }} /> : null}
@@ -106,11 +109,7 @@ export default function ExamToday({ navigation }) {
         <View style={{ gap: 10, marginTop: 12 }}>
           <Tile icon="albums-outline" title="מילים לחזרה" sub={`${ws.mastered} נשלטות מתוך ${ws.total}`} big={ws.due} onPress={() => navigation.navigate('מילים')} />
           <Tile icon="clipboard-outline" title="בדיקה שבועית" sub={toFriday === 0 ? (plan.sim ? 'השבוע הסימולציה המלאה מחליפה אותה' : 'היום') : toFriday === 1 ? 'מחר, ביום שישי' : `ביום שישי, בעוד ${toFriday} ימים`} big={toFriday === 0 ? null : toFriday} />
-          {!off && !notStarted ? (
-            <Press onPress={() => setOffToday(true)} scaleTo={0.98} accessibilityLabel="לקחת את היום חופש" style={{ alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 16 }}>
-              <Text style={[t.sub, { fontFamily: font.b, color: c.steel }]}>לקחת את היום חופש</Text>
-            </Press>
-          ) : null}
+
         </View>
       </Reveal>
     </Page>

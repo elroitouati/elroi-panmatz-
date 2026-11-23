@@ -285,6 +285,19 @@ ok(!brain.planForDay({ ...base, settings: { ...base.settings, startDate: '2026-1
   ok(ms.due === 5 && ms.done === 1, `סיכום חודשי ${ms.done}/${ms.due}`);
 }
 
+// ---- יום מוצדק: לא פספוס בלוח, אבל החומר מתפזר ----
+{
+  const E = { ...base, diagnosticDone: true, settings: { ...base.settings, startDate: '2026-11-24', weeklyOff: [6], excusedDays: ['2026-11-26'] },
+    sessions: [{ id: 'd', mode: 'diagnostic', complete: true, d: '2026-11-24', t: 1 }], attempts: [{ topic: 'vocab', ok: true, ms: 9000, d: '2026-11-24' }],
+    daily: { '2026-11-26': { plan: { tasks: [{ id: 'practice', minutes: 18 }] }, done: {} } } };
+  ok(brain.examDay(E, '2026-11-26', '2026-11-27').status === 'excused', 'לוח: יום מוצדק');
+  const noEx = { ...E, settings: { ...E.settings, excusedDays: [] } };
+  ok(brain.catchUp(E, '2026-11-27').debt === brain.catchUp(noEx, '2026-11-27').debt && brain.catchUp(E, '2026-11-27').debt >= 18, `יום מוצדק עדיין מתפזר (${brain.catchUp(E, '2026-11-27').debt})`);
+  const ms = brain.examMonthStats(E, ['2026-11-25', '2026-11-26'], '2026-11-27');
+  ok(ms.due === 1, `יום מוצדק לא נספר בסיכום (${ms.due})`);
+  ok(!brain.planForDay(E, '2026-11-26').off, 'יום מוצדק הוא לא יום חופש — המשימות נשארות');
+}
+
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 fs.rmSync(tmp, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);
