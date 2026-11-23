@@ -52,7 +52,7 @@ function ExamTabBar({ state, navigation, position }) {
       {Platform.OS === 'ios' ? <BlurView intensity={50} tint={c.dark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} /> : null}
       <View style={[StyleSheet.absoluteFill, { backgroundColor: Platform.OS === 'ios' ? c.glass : c.paper }]} />
       <View style={{ position: 'absolute', top: 0, start: 0, end: 0, height: StyleSheet.hairlineWidth, backgroundColor: c.mist }} />
-      {state.routes.map((route, i) => {
+      {state.routes.map((route, i) => ({ route, i })).reverse().map(({ route, i }) => {
         const focused = state.index === i;
         const icon = ICONS[route.name];
         const on = position.interpolate({ inputRange: [i - 1, i, i + 1].map((v) => Math.max(-1, Math.min(n, v))), outputRange: [0, 1, 0], extrapolate: 'clamp' });
@@ -82,16 +82,18 @@ function ExamTabs() {
   return (
     <PagerLtr>
     <Tab.Navigator
+      initialRouteName="היום"
       tabBarPosition="bottom"
       tabBar={(p) => <Rtl><ExamTabBar {...p} /></Rtl>}
       screenOptions={{ swipeEnabled: true, animationEnabled: false, lazy: true, lazyPreloadDistance: 1, lazyPlaceholder: () => <View style={{ flex: 1, backgroundColor: c.paper }} /> }}
       sceneContainerStyle={{ backgroundColor: c.paper }}
       style={{ backgroundColor: c.paper }}
     >
-      <Tab.Screen name="היום" component={rtlScreen(ExamToday)} />
-      <Tab.Screen name="תרגול" component={rtlScreen(ExamPractice)} />
-      <Tab.Screen name="מילים" component={rtlScreen(ExamWords)} />
+      {/* סדר הפוך — בשביל כיוון ההחלקה (ראה App.js). הסרגל מציג בסדר הרגיל. */}
       <Tab.Screen name="התקדמות" component={rtlScreen(ExamProgress)} />
+      <Tab.Screen name="מילים" component={rtlScreen(ExamWords)} />
+      <Tab.Screen name="תרגול" component={rtlScreen(ExamPractice)} />
+      <Tab.Screen name="היום" component={rtlScreen(ExamToday)} />
     </Tab.Navigator>
     </PagerLtr>
   );

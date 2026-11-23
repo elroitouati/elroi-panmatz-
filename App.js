@@ -69,7 +69,10 @@ function Tabs() {
   const gate = useGate();
   return (
     <PagerLtr>
+    {/* כיוון ההחלקה: הדפים מסודרים בסדר הפוך (מבחן ← … ← היום) כדי שהחלקה
+        שמאלה תעבור לטאב שמשמאל בסרגל. הסרגל עצמו מציג אותם בסדר הרגיל. */}
     <Tab.Navigator
+      initialRouteName="היום"
       tabBarPosition="bottom"
       tabBar={(props) => <Rtl><TabBar {...props} /></Rtl>}
       screenOptions={{
@@ -86,15 +89,15 @@ function Tabs() {
       sceneContainerStyle={{ backgroundColor: colors.bg }}
       style={{ backgroundColor: colors.bg }}
     >
-      <Tab.Screen name="היום" component={rtlScreen(HomeScreen)} />
-      <Tab.Screen name="כושר" component={rtlScreen(FitnessScreen)} />
-      <Tab.Screen name="הלוח שלי" component={rtlScreen(CalendarScreen)} />
       {/* לחיצה על "מבחן" לא מחליפה טאב — היא פותחת את גיליון הכניסה לעולם המבחן */}
       <Tab.Screen
         name="מבחן"
         component={rtlScreen(PsychScreen)}
         listeners={{ tabPress: (e) => { e.preventDefault(); gate.open(); } }}
       />
+      <Tab.Screen name="הלוח שלי" component={rtlScreen(CalendarScreen)} />
+      <Tab.Screen name="כושר" component={rtlScreen(FitnessScreen)} />
+      <Tab.Screen name="היום" component={rtlScreen(HomeScreen)} />
     </Tab.Navigator>
     </PagerLtr>
   );

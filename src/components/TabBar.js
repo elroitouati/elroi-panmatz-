@@ -38,7 +38,9 @@ export default function TabBar({ state, navigation, position }) {
       {Platform.OS === 'ios' ? <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} /> : null}
       <View style={[StyleSheet.absoluteFill, styles.tint]} />
       <View style={styles.hairline} />
-      {state.routes.map((route, i) => {
+      {/* הדפים מסודרים הפוך (בשביל כיוון ההחלקה) — מציגים אותם בסדר הרגיל:
+          "היום" ראשון, בצד ימין */}
+      {state.routes.map((route, i) => ({ route, i })).reverse().map(({ route, i }) => {
         const focused = state.index === i;
         const icon = ICONS[route.name] || 'ellipse';
         // 1 כשהמסך הזה במרכז, 0 כשהוא מסך שלם הצידה. בלי position — לפי index.

@@ -8,8 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "node scripts/test-edge-cases.mjs && node scripts/test-sync.mjs && node scripts/test-exam.mjs",
-    "deploy:web": "bash scripts/deploy-web.sh",
-    "postinstall": "patch-package"
+    "deploy:web": "bash scripts/deploy-web.sh"
   },
   "dependencies": {
     "@expo-google-fonts/heebo": "^0.4.2",
@@ -45,7 +44,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
-    "patch-package": "^8.0.0",
     "react-test-renderer": "^18.2.0"
   },
   "private": true

@@ -71,6 +71,15 @@ export function ExamProvider({ children }) {
         next.settingsAt = Date.now();
         if (!next.attempts.length && next.daily?.[today]) { const d = { ...next.daily }; delete d[today]; next.daily = d; }
       }
+      // תיקון חד-פעמי: הגרסה נפתחה לראשונה אחרי חצות, ולכן "מחר" נקבע ל-25.11.
+      // הבקשה הייתה להתחיל ב-24.11 — אם עוד לא התחלת, מחזירים את ההתחלה ל-24.11.
+      if (!next.startFix1) {
+        next.startFix1 = true;
+        if (next.settings.startDate === '2026-11-25' && !next.attempts.length) {
+          next.settings = { ...next.settings, startDate: '2026-11-24' };
+          next.settingsAt = Date.now();
+        }
+      }
       setState(next);
     })();
   }, []);
