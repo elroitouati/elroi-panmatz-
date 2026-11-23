@@ -21,6 +21,7 @@ import {
   cancelStageReminders,
   sendReinforcement,
 } from '../notifications';
+import { attachSync, notifyStateChanged } from '../sync/panmatzSync';
 
 const AppContext = createContext(null);
 
@@ -78,6 +79,8 @@ export function AppProvider({ children }) {
   const [toast, setToast] = useState(null); // הודעת חיזוק קצרה בתוך האפליקציה
   const [streakCelebration, setStreakCelebration] = useState(null); // 7 / 14 / 30...
   const loadedRef = useRef(false);
+  const stateRef = useRef(null);
+  stateRef.current = state;
 
   // טעינה ראשונית
   useEffect(() => {
@@ -121,6 +124,18 @@ export function AppProvider({ children }) {
     state?.settings.notificationsEnabled,
     (state?.stages || []).map((s) => `${s.id}:${s.date}:${s.completed ? 1 : 0}`).join('|'),
   ]);
+
+  // סנכרון עם My Day (תוספת בלבד): אם אין מפתחות או התחברות — לא קורה כלום
+  useEffect(
+    () => attachSync({
+      getState: () => stateRef.current,
+      update: (fn) => setState((s) => (s ? fn(s) : s)),
+    }),
+    []
+  );
+  useEffect(() => {
+    if (state && loadedRef.current) notifyStateChanged();
+  }, [state]);
 
   // סנכרון תזכורות אימון עם ימי האימון והעדפות
   useEffect(() => {
@@ -390,8 +405,12 @@ export function AppProvider({ children }) {
     });
   };
 
+  // שחזור מגיבוי בענן — עובר דרך אותו מיזוג בטוח כמו טעינה רגילה
+  const restoreState = (raw) => setState(normalize(raw));
+
   const value = {
     state,
+    restoreState,
     celebration,
     dismissCelebration: () => setCelebration(null),
     streakCelebration,
