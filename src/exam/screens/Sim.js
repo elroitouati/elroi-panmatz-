@@ -206,10 +206,11 @@ export default function Sim({ navigation, route }) {
 function SimExit({ open, onClose, onPause, onCancel, c }) {
   return (
     <ExamSheet visible={open} onClose={onClose} title="לעצור את הסימולציה?" body="ההתקדמות נשמרת — אפשר להמשיך מאותה שאלה, מהיום או מהתרגול."
-      primary="עצירה ושמירה" onPrimary={onPause} secondary="להמשיך">
-      <Press onPress={onCancel} accessibilityLabel="ביטול הסימולציה" style={{ alignSelf: 'center', paddingVertical: 10, marginBottom: 8 }}>
-        <Text style={{ fontFamily: font.b, fontSize: 16, color: c.bad }}>ביטול הסימולציה (בלי שמירה)</Text>
-      </Press>
-    </ExamSheet>
+      primary="עצירה ושמירה" onPrimary={onPause} secondary="להמשיך"
+      footer={(
+        <Press onPress={onCancel} accessibilityLabel="ביטול הסימולציה" style={{ alignSelf: 'center', paddingVertical: 12, marginTop: 6 }}>
+          <Text style={{ fontFamily: font.b, fontSize: 16, color: c.bad }}>ביטול הסימולציה (בלי שמירה)</Text>
+        </Press>
+      )} />
   );
 }

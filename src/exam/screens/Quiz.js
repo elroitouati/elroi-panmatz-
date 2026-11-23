@@ -10,6 +10,7 @@ import { makeQuestion } from '../gen';
 import { buildDaily, buildTopic, buildDiagnostic, buildWeekly, buildErrors } from '../engine/brain';
 import { TOPIC } from '../topics';
 import { haptic } from '../../design/haptics';
+import { ltr } from '../../design/rtl';
 
 // ============================================================================
 //  מריץ שאלות. שני מצבים:
@@ -149,7 +150,7 @@ export default function Quiz({ navigation, route }) {
     <View style={{ flex: 1, backgroundColor: c.paper }}>
       <FocusBar
         onClose={() => setExitOpen(true)}
-        title={`${idx + 1} / ${items.length}`}
+        title={ltr(`${idx + 1} / ${items.length}`)}
         right={(
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             {feedback ? <Pill label="לימוד" icon="book-outline" onPress={() => navigation.navigate('Lesson', { topic: cur.topic, peek: true })} /> : null}

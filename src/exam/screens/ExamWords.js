@@ -29,9 +29,9 @@ export default function ExamWords({ navigation }) {
     <Page title="מילים" over={`${all.mastered} נשלטות · ${all.learning} בלמידה · ${all.fresh} חדשות`}>
       <Reveal index={0}>
         <Flow variant="exam" style={{ padding: 22 }}>
-          <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim, textAlign: dir.start }}>{taskDone ? 'החבילה של היום הושלמה' : 'חזרה מרווחת'}</Text>
+          <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim, textAlign: dir.start }}>{taskDone ? 'החבילה של היום הושלמה' : deck.length ? `${deck.length} מילים · חזרה מרווחת` : 'חזרה מרווחת'}</Text>
           <Text style={{ fontFamily: font.h, fontSize: 28, lineHeight: 34, color: ON_FLOW.ink, marginTop: 4, textAlign: dir.start }}>
-            {deck.length ? `החבילה של היום · ${deck.length} מילים` : 'אין מילים לחזרה עכשיו'}
+            {deck.length ? 'החבילה של היום' : 'אין מילים לחזרה עכשיו'}
           </Text>
           <Text style={{ fontFamily: font.r, fontSize: 17, lineHeight: 25, color: ON_FLOW.dim, marginTop: 6, textAlign: dir.start }}>
             מילה שידעת חוזרת אחרי יותר ויותר ימים. מילה שלא ידעת — חוזרת מחר.

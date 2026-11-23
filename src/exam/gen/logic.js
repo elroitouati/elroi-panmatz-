@@ -48,16 +48,16 @@ function orderQ(r) {
 function matchQ(r) {
   const names = r.sample(PEOPLE, 3);
   const cats = r.pick([
-    { label: 'חיה', vals: ['כלב', 'חתול', 'תוכי'] },
-    { label: 'ספורט', vals: ['ריצה', 'שחייה', 'כדורסל'] },
-    { label: 'צבע', vals: ['אדום', 'כחול', 'ירוק'] },
+    { label: 'חיה', vals: ['כלב', 'חתול', 'תוכי'], is: 'היא' },
+    { label: 'ספורט', vals: ['ריצה', 'שחייה', 'כדורסל'], is: 'הוא' },
+    { label: 'צבע', vals: ['אדום', 'כחול', 'ירוק'], is: 'הוא' },
   ]);
   const sol = r.shuffle(cats.vals); // sol[i] שייך ל-names[i]
   const all = perms(cats.vals);
   const makers = [
     () => { const i = r.int(0, 2); const v = r.pick(cats.vals.filter((x) => x !== sol[i])); return { t: `ל${names[i]} אין ${v}.`, f: (p) => p[i] !== v }; },
     () => { const i = r.int(0, 2); return { t: `ל${names[i]} יש ${sol[i]}.`, f: (p) => p[i] === sol[i] }; },
-    () => { const [i, j] = r.sample([0, 1, 2], 2); const v = r.pick(cats.vals.filter((x) => x !== sol[i] && x !== sol[j])); return { t: `ה${cats.label} של ${names[i]} ושל ${names[j]} הוא לא ${v}.`, f: (p) => p[i] !== v && p[j] !== v }; },
+    () => { const [i, j] = r.sample([0, 1, 2], 2); const v = r.pick(cats.vals.filter((x) => x !== sol[i] && x !== sol[j])); return { t: `ה${cats.label} של ${names[i]} ושל ${names[j]} ${cats.is} לא ${v}.`, f: (p) => p[i] !== v && p[j] !== v }; },
   ];
   const clues = [];
   let cand = all;
@@ -104,7 +104,8 @@ function mustQ(r) {
 
 export function logicQuestion(seed, sub) {
   const r = makeRng(seed);
-  const s = sub && SUBS.includes(sub) ? sub : r.pick(SUBS);
+  const picked = r.pick(SUBS);
+  const s = sub && SUBS.includes(sub) ? sub : picked;
   const q = s === 'order' ? orderQ(r) : s === 'match' ? matchQ(r) : mustQ(r);
   const { options, answer } = withDistractors(r, q.correct, r.shuffle(q.wrong), String);
   return { topic: 'logic', sub: s, seed, kind: 'text', prompt: q.prompt, options, answer, explain: q.explain };

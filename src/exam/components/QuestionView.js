@@ -22,7 +22,7 @@ export default function QuestionView({ q, chosen, onChoose, reveal, width = 340 
   const body = (() => {
     switch (q.kind) {
       case 'series':
-        return <Sequence items={[...q.seq.map(String), '?']} />;
+        return <Sequence items={[...q.seq.map(String), '?']} width={width} />;
       case 'word':
         return (
           <View style={{ backgroundColor: c.surface, borderRadius: 22, paddingVertical: 30, alignItems: 'center' }}>

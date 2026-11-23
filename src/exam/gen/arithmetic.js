@@ -75,7 +75,8 @@ function build(r, sub) {
 
 export function arithmeticQuestion(seed, sub) {
   const r = makeRng(seed);
-  const s = sub && SUBS.includes(sub) ? sub : r.pick(SUBS);
+  const picked = r.pick(SUBS);
+  const s = sub && SUBS.includes(sub) ? sub : picked;
   const q = build(r, s);
   const fallback = [q.ans + 2, q.ans - 2, q.ans + 5, q.ans * 2, q.ans + 10];
   const ds = [...q.d, ...fallback].filter((x) => Number.isFinite(x) && x > 0).map((x) => Math.round(x * 100) / 100);

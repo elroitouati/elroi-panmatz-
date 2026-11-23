@@ -148,7 +148,7 @@ export default function App() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <GestureHandlerRootView style={styles.root} onLayout={onReady}>
+    <GestureHandlerRootView style={styles.app} onLayout={onReady}>
       <SafeAreaProvider>
         <StatusBar style="light" />
         <AppProvider>
@@ -163,4 +163,5 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  app: { flex: 1, backgroundColor: '#000' },
 });

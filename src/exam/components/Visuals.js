@@ -86,21 +86,24 @@ export function Matrix({ cells, width = 300 }) {
   );
 }
 
-export function Sequence({ items, notes, big = true }) {
+export function Sequence({ items, notes, big = true, width = 340 }) {
   const { c } = useX();
+  // גודל הספרות מותאם לאורך הסדרה — הסדרה תמיד בשורה אחת, בלי שבירה
+  const n = items.length;
+  const maxLen = Math.max(2, ...items.map((x) => String(x).length));
+  const fs = Math.max(17, Math.min(big ? 28 : 24, Math.floor((width - 24 - n * 12) / (n * maxLen * 0.6))));
   return (
     <View style={{ backgroundColor: c.surface, borderRadius: 22, paddingVertical: 26, paddingHorizontal: 10 }}>
-      <View style={{ flexDirection: LTR_ROW, justifyContent: 'center', alignItems: 'flex-end', flexWrap: 'wrap', rowGap: 12 }}>
+      <View style={{ flexDirection: LTR_ROW, justifyContent: 'center', alignItems: 'flex-end' }}>
         {items.map((it, i) => {
           const q = it === '?' || it === '_';
           return (
-            <View key={i} style={{ alignItems: 'center', marginHorizontal: 6 }}>
+            <View key={i} style={{ alignItems: 'center', marginHorizontal: n > 6 ? 4 : 6 }}>
               {q ? (
-                <View style={{ width: 34, height: big ? 34 : 28, borderBottomWidth: 3, borderColor: c.deep }} />
+                <View style={{ width: fs * 1.2, height: fs * 1.2, borderBottomWidth: 3, borderColor: c.deep }} />
               ) : (
-                <Text style={{ fontFamily: font.b, fontSize: big ? 28 : 24, lineHeight: big ? 34 : 30, color: c.ink, fontVariant: ['tabular-nums'] }}>{it}</Text>
+                <Text style={{ fontFamily: font.b, fontSize: fs, lineHeight: Math.round(fs * 1.22), color: c.ink, fontVariant: ['tabular-nums'] }}>{it}</Text>
               )}
-              {notes && i < items.length - 1 && notes[i] ? null : null}
             </View>
           );
         })}

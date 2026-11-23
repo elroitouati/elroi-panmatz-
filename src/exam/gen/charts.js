@@ -12,7 +12,8 @@ const SUBS = ['read', 'compare', 'change'];
 
 export function chartsQuestion(seed, sub) {
   const r = makeRng(seed);
-  const s = sub && SUBS.includes(sub) ? sub : r.pick(SUBS);
+  const picked = r.pick(SUBS);
+  const s = sub && SUBS.includes(sub) ? sub : picked;
   const set = r.pick(SETS);
   const step = r.pick([5, 10, 20]);
   const values = set.labels.map(() => step * r.int(2, 10));

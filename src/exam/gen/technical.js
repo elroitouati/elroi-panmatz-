@@ -58,14 +58,16 @@ function pulleys(r) {
 
 export function technicalQuestion(seed, sub, fixedId) {
   const r = makeRng(seed);
-  let s = sub && ['gears', 'levers', 'pulleys', 'concepts'].includes(sub) ? sub : r.pick(SUBS);
+  const picked = r.pick(SUBS);
+  let s = sub && ['gears', 'levers', 'pulleys', 'concepts'].includes(sub) ? sub : picked;
   if (fixedId) s = 'concepts';
   let q;
   if (s === 'gears') q = gears(r);
   else if (s === 'levers') q = levers(r);
   else if (s === 'pulleys') q = pulleys(r);
   else {
-    const c = fixedId ? TECH_CONCEPTS.find((x) => x.id === fixedId) || r.pick(TECH_CONCEPTS) : r.pick(TECH_CONCEPTS);
+    const random = r.pick(TECH_CONCEPTS);
+    const c = (fixedId && TECH_CONCEPTS.find((x) => x.id === fixedId)) || random;
     q = { prompt: c.q, correct: c.correct, wrong: c.wrong, explain: c.explain, itemId: c.id };
   }
   const { options, answer } = withDistractors(r, q.correct, [...q.wrong, 'אף תשובה'], String);

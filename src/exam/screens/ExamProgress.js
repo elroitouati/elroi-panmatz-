@@ -26,7 +26,8 @@ export default function ExamProgress({ navigation }) {
   const dec = decisions(state, today);
   const errs = openErrors(state).length;
   const tests = state.sessions.filter((s) => MODE_NAME[s.mode] && s.complete).slice(-8).reverse();
-  const pct = Math.round(p.now * 100);
+  const has = state.attempts.length > 0;
+  const pct = has ? Math.round(p.now * 100) : null;
   const chipColor = p.status === 'behind' ? { bg: 'rgba(229,138,130,0.25)', fg: '#FFD5D0' } : { bg: 'rgba(93,187,141,0.22)', fg: '#BDF0D5' };
 
   return (
@@ -35,7 +36,7 @@ export default function ExamProgress({ navigation }) {
         <Flow variant="exam" style={{ padding: 22 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <Text style={{ fontFamily: font.h, fontSize: 56, lineHeight: 60, color: ON_FLOW.ink, fontVariant: ['tabular-nums'] }}>
-              {pct}<Text style={{ fontSize: 26, color: ON_FLOW.dim }}>%</Text>
+              {pct == null ? '—' : pct}{pct == null ? null : <Text style={{ fontSize: 26, color: ON_FLOW.dim }}>%</Text>}
             </Text>
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: font.b, fontSize: 18, color: ON_FLOW.ink, textAlign: dir.start }}>מוכנות למבחן</Text>
@@ -49,7 +50,7 @@ export default function ExamProgress({ navigation }) {
           </View>
           {/* מסלול: המילוי = איפה אתה; הסימון = איפה הקצב מצפה שתהיה היום */}
           <View style={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(245,246,248,0.22)', marginTop: 18, marginBottom: 8 }}>
-            <View style={{ position: 'absolute', top: 0, bottom: 0, start: 0, width: `${Math.min(100, (p.now / TARGET) * 100)}%`, borderRadius: 99, backgroundColor: ON_FLOW.ink }} />
+            <View style={{ position: 'absolute', top: 0, bottom: 0, start: 0, width: `${has ? Math.min(100, (p.now / TARGET) * 100) : 0}%`, borderRadius: 99, backgroundColor: ON_FLOW.ink }} />
             <View style={{ position: 'absolute', top: -5, bottom: -5, start: `${Math.min(100, (p.expected / TARGET) * 100)}%`, width: 3, borderRadius: 2, backgroundColor: '#A0B8D8' }} />
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

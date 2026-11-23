@@ -23,7 +23,8 @@ const GEN = {
 // ref = מזהה פריט קבוע (מילה / אנלוגיה / שאלה טכנית) כשרוצים בדיוק אותו פריט
 export function makeQuestion({ topic, sub, seed, ref }) {
   const q = GEN[topic](seed >>> 0, sub, ref);
-  q.id = `${topic}:${q.sub}:${seed >>> 0}${ref ? ':' + ref : ''}`;
   q.ref = ref || q.wordId || q.itemId || null;
+  // המזהה נבנה מהערכים שנבחרו בפועל — זהה בין יצירה ראשונה לשחזור
+  q.id = `${topic}:${q.sub}:${seed >>> 0}:${q.ref || ''}`;
   return q;
 }

@@ -58,7 +58,8 @@ function build(r, sub) {
 
 export function seriesQuestion(seed, sub) {
   const r = makeRng(seed);
-  const s = sub && SUBS.includes(sub) ? sub : r.pick(SUBS);
+  const picked = r.pick(SUBS);
+  const s = sub && SUBS.includes(sub) ? sub : picked;
   const { seq, explain, near } = build(r, s);
   const shown = seq.slice(0, -1);
   const correct = seq[seq.length - 1];

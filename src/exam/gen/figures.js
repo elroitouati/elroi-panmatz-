@@ -86,7 +86,8 @@ function build(r, sub) {
 
 export function figuresQuestion(seed, sub) {
   const r = makeRng(seed);
-  const s = sub && SUBS.includes(sub) ? sub : r.pick(SUBS);
+  const picked = r.pick(SUBS);
+  const s = sub && SUBS.includes(sub) ? sub : picked;
   const q = build(r, s);
   const { options, answer } = withDistractors(r, q.correct, q.wrong, key);
   // אם לא נמצאו 3 מסיחים שונים — מוסיפים סיבובים/שינויים אקראיים

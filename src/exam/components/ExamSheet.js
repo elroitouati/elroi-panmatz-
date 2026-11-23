@@ -4,7 +4,7 @@ import Sheet from '../../components/Sheet';
 import { useX, Btn } from '../ui';
 
 // גיליון אישור בצבעי עולם המבחן. כפתור ראשי אחד, וכפתור משני "לא עכשיו".
-export default function ExamSheet({ visible, onClose, title, body, primary, onPrimary, secondary = 'ביטול', onSecondary, destructive, children }) {
+export default function ExamSheet({ visible, onClose, title, body, primary, onPrimary, secondary = 'ביטול', onSecondary, destructive, children, footer }) {
   const { c, t } = useX();
   return (
     <Sheet visible={visible} onClose={onClose} bg={c.surface} grab={c.mist} scrim={c.scrim}>
@@ -15,6 +15,7 @@ export default function ExamSheet({ visible, onClose, title, body, primary, onPr
         {primary ? <Btn label={primary} onPress={onPrimary} variant={destructive ? 'bad' : 'primary'} /> : null}
         {secondary ? <Btn label={secondary} onPress={onSecondary || onClose} variant="line" /> : null}
       </View>
+      {footer}
     </Sheet>
   );
 }

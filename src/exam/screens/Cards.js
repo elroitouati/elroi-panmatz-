@@ -13,6 +13,7 @@ import { useExam } from '../ExamContext';
 import { WORD } from '../data/words';
 import { ease, keep } from '../../design/tokens';
 import { haptic } from '../../design/haptics';
+import { ltr } from '../../design/rtl';
 
 // ============================================================================
 //  כרטיסיות בסגנון Quizlet.
@@ -171,7 +172,7 @@ export default function Cards({ navigation, route }) {
               <Ionicons name="checkmark" size={18} color={c.ok} />
               <Text style={{ fontFamily: font.b, fontSize: 16, color: c.ok, fontVariant: ['tabular-nums'] }}>{know.length}</Text>
             </Animated.View>
-            <Text style={{ fontFamily: font.m, fontSize: 15, color: c.slate, fontVariant: ['tabular-nums'] }}>{idx + 1} / {queue.length}{round > 1 ? ` · סיבוב ${round}` : ''}</Text>
+            <Text style={{ fontFamily: font.m, fontSize: 15, color: c.slate, fontVariant: ['tabular-nums'] }}>{ltr(`${idx + 1} / ${queue.length}`)}{round > 1 ? ` · סיבוב ${round}` : ''}</Text>
             <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: c.badSoft }, lStyle]}>
               <Text style={{ fontFamily: font.b, fontSize: 16, color: c.bad, fontVariant: ['tabular-nums'] }}>{learn.length}</Text>
               <Ionicons name="refresh" size={17} color={c.bad} />

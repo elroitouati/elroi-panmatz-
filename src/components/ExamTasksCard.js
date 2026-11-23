@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Flow from './Flow';
 import Press from './Press';
-import { dir } from '../design/rtl';
+import { dir, ltr } from '../design/rtl';
 import { useToday } from '../exam/ExamContext';
 import { useGate } from '../exam/Gate';
 
@@ -32,7 +32,7 @@ export default function ExamTasksCard({ style }) {
         <Text style={{ fontFamily: F.m, fontSize: 15, color: DIM, flex: 1, textAlign: dir.start }}>פסיכוטכני · היום</Text>
         {!off && total ? (
           <View style={{ backgroundColor: 'rgba(245,246,248,0.16)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 }}>
-            <Text style={{ fontFamily: F.b, fontSize: 15, color: INK, fontVariant: ['tabular-nums'] }}>{`${finished} / ${total}`}</Text>
+            <Text style={{ fontFamily: F.b, fontSize: 15, color: INK, fontVariant: ['tabular-nums'] }}>{ltr(`${finished} / ${total}`)}</Text>
           </View>
         ) : null}
       </View>

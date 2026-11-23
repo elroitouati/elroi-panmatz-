@@ -48,6 +48,18 @@ for (const t of TOPICS) {
     ok(bad === 0, `${t.id}/${sub}: ${bad} שאלות פגומות ${sample ? JSON.stringify(sample).slice(0, 300) : ''}`);
   }
 }
+// שחזור: שאלה שנוצרה בלי תת-נושא/פריט נבנית מחדש זהה כשמעבירים את מה שנבחר בפועל
+for (const t of TOPICS) {
+  for (const [sub] of [[null], ...t.subs]) {
+    let diff = 0;
+    for (let s = 1; s <= 150; s++) {
+      const a = makeQuestion({ topic: t.id, sub, seed: s * 131 });
+      const b = makeQuestion({ topic: t.id, sub: a.sub, seed: s * 131, ref: a.ref });
+      if (JSON.stringify(a) !== JSON.stringify(b)) diff++;
+    }
+    ok(diff === 0, `שחזור ${t.id}/${sub}: ${diff} שונות`);
+  }
+}
 // דטרמיניזם: אותו זרע = אותה שאלה
 ok(JSON.stringify(makeQuestion({ topic: 'logic', sub: 'order', seed: 42 })) === JSON.stringify(makeQuestion({ topic: 'logic', sub: 'order', seed: 42 })), 'same seed same question');
 ok(makeQuestion({ topic: 'vocab', sub: null, seed: 5, ref: WORDS[10].id }).wordId === WORDS[10].id, 'vocab ref respected');

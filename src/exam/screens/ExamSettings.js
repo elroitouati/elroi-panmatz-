@@ -92,7 +92,10 @@ export default function ExamSettings({ navigation }) {
         <SectionTitle>המבחן</SectionTitle>
         <View style={{ backgroundColor: c.surface, borderRadius: 20, overflow: 'hidden' }}>
           <Row first title="תאריך המבחן" value={`${fmtDay(st.examDate)} · ${HEB_WEEKDAYS_FULL[weekdayOf(st.examDate)]}`} onPress={() => { setDraftDate(st.examDate); setDateOpen(true); }} />
-          <Row title="סימולציות מלאות" value={st.simDates.map(fmtDay).join(' · ')} />
+          <View style={{ paddingVertical: 14, paddingHorizontal: 18, borderTopWidth: 1, borderColor: c.mist }}>
+            <Text style={[t.body, { fontFamily: font.m }]}>סימולציות מלאות</Text>
+            <Text style={t.sub}>{st.simDates.map(fmtDay).join(' · ')}</Text>
+          </View>
         </View>
 
         <SectionTitle>זמן לימוד יומי</SectionTitle>
