@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect } from 'react-native-svg';
 
@@ -17,12 +17,22 @@ const PAL = {
 
 let counter = 0;
 
+// הכרטיס מודד את עצמו (onLayout) והציור מקבל מידות מדויקות בפיקסלים.
+// מידות באחוזים ב-SVG באנדרואיד מחושבות לפעמים מגודל ישן — ואז הצבע לא
+// מכסה את כל הכרטיס ונראה פס כהה בצד ובתחתית.
 export default function Flow({ variant = 'exam', radius = 24, style, children, pointerEvents }) {
   const id = useRef(`f${++counter}`).current;
   const p = PAL[variant] || PAL.exam;
+  const [size, setSize] = useState(null);
+  const onLayout = (e) => {
+    const { width, height } = e.nativeEvent.layout;
+    const w = Math.ceil(width), h = Math.ceil(height);
+    if (!size || size.w !== w || size.h !== h) setSize({ w, h });
+  };
   return (
-    <View style={[{ borderRadius: radius, overflow: 'hidden', backgroundColor: p.stops[1] }, style]} pointerEvents={pointerEvents}>
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" pointerEvents="none">
+    <View onLayout={onLayout} style={[{ borderRadius: radius, overflow: 'hidden', backgroundColor: p.stops[1] }, style]} pointerEvents={pointerEvents}>
+      {size ? (
+      <Svg style={{ position: 'absolute', top: 0, left: 0, width: size.w, height: size.h }} width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`} pointerEvents="none">
         <Defs>
           <LinearGradient id={`${id}l`} x1="0.2" y1="0" x2="0.8" y2="1">
             <Stop offset="0" stopColor={p.stops[0]} />
@@ -38,10 +48,11 @@ export default function Flow({ variant = 'exam', radius = 24, style, children, p
             <Stop offset="1" stopColor={p.shade} stopOpacity="0" />
           </RadialGradient>
         </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}l)`} />
-        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}g)`} />
-        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}s)`} />
+        <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id}l)`} />
+        <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id}g)`} />
+        <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id}s)`} />
       </Svg>
+      ) : null}
       {children}
     </View>
   );
