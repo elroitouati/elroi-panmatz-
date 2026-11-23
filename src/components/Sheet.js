@@ -46,7 +46,7 @@ export function SheetHost({ children }) {
 
 const OVERSHOOT = 80; // גוף נסתר מתחת למסך, כדי שקפיצה למעלה לא תחשוף רווח
 
-export default function Sheet({ visible, onClose, children, scroll }) {
+export default function Sheet({ visible, onClose, children, scroll, bg, grab, scrim }) {
   const host = useContext(HostCtx);
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
@@ -132,17 +132,17 @@ export default function Sheet({ visible, onClose, children, scroll }) {
   return (
     <Modal transparent visible statusBarTranslucent animationType="none" onRequestClose={onClose}>
       <GestureHandlerRootView style={styles.fill}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, scrimStyle]}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, scrim && { backgroundColor: scrim }, scrimStyle]}>
           <Pressable style={styles.fill} onPress={onClose} accessibilityLabel="סגירה" />
         </Animated.View>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.kav} pointerEvents="box-none">
           <Animated.View
             onLayout={onLayout}
-            style={[styles.sheet, { paddingBottom: OVERSHOOT + insets.bottom + space[4] }, sheetStyle]}
+            style={[styles.sheet, bg && { backgroundColor: bg }, { paddingBottom: OVERSHOOT + insets.bottom + space[4] }, sheetStyle]}
           >
             <GestureDetector gesture={pan}>
               <View style={styles.grabZone} accessibilityLabel="ידית גרירה">
-                <View style={styles.grabber} />
+                <View style={[styles.grabber, grab && { backgroundColor: grab }]} />
               </View>
             </GestureDetector>
             <Body

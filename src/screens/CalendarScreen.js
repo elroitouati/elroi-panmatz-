@@ -6,6 +6,7 @@ import Screen from '../components/Screen';
 import IconButton from '../components/IconButton';
 import DayCell from '../components/DayCell';
 import Reveal from '../components/Reveal';
+import Flow from '../components/Flow';
 import { Section, Row } from '../components/Group';
 import DaySheet from '../sheets/DaySheet';
 import { colors, radius, space, ease, keep } from '../design/tokens';
@@ -74,7 +75,7 @@ export default function CalendarScreen() {
   return (
     <Screen title="הלוח שלי" overline="התוכנית מול הביצוע">
       <Reveal index={0}>
-        <View style={styles.card}>
+        <Flow variant="oliveDeep" radius={radius.card} style={styles.card}>
           <View style={styles.monthNav}>
             <IconButton icon="chevron-forward" label="לחודש הקודם" onPress={() => changeMonth(-1)} tone="plain" />
             <Text style={[text.headlineStrong, styles.month]}>{monthLabel(year, month)}</Text>
@@ -127,7 +128,7 @@ export default function CalendarScreen() {
             <LegendIcon icon={WORKOUTS.run.icon} label="ריצה" />
             <Text style={text.caption}>בלי אייקון = מנוחה</Text>
           </View>
-        </View>
+        </Flow>
         <Text style={[text.caption, styles.hint]}>לחיצה על יום מראה מה היה מתוכנן ומה בוצע.</Text>
       </Reveal>
 
@@ -205,7 +206,7 @@ function LegendIcon({ icon, label }) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.group, borderRadius: radius.card, padding: space[4], overflow: 'hidden' },
+  card: { padding: space[4] },
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space[3] },
   month: { textAlign: 'center' },
   week: { flexDirection: 'row', marginBottom: 2 },

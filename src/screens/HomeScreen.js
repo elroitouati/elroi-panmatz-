@@ -24,6 +24,7 @@ import { currentStreak, rescuableMiss } from '../utils/journal';
 import RescueCard from '../components/RescueCard';
 import StreakPill from '../components/StreakPill';
 import Reveal from '../components/Reveal';
+import ExamTasksCard from '../components/ExamTasksCard';
 
 // ============================================================================
 //  היום. שאלה אחת: מה עושים היום, וכמה נשאר עד השלב הבא.
@@ -80,8 +81,13 @@ export default function HomeScreen({ navigation }) {
         />
       </Reveal>
 
-      {/* ---- גיבור: טבעת יעדי היום + השלב הבא ---- */}
+      {/* ---- משימות המבחן — בצבעי עולם המבחן ---- */}
       <Reveal index={1} follow>
+        <ExamTasksCard style={{ marginBottom: space[4] }} />
+      </Reveal>
+
+      {/* ---- גיבור: טבעת יעדי היום + השלב הבא ---- */}
+      <Reveal index={2} follow>
         <View style={styles.hero}>
           <Ring progress={todays.length ? doneCount / todays.length : 0} size={112} stroke={10}>
             {todays.length ? (
@@ -104,14 +110,14 @@ export default function HomeScreen({ navigation }) {
       </Reveal>
 
       {/* ---- מסלול הקבלה ---- */}
-      <Reveal index={2} follow>
+      <Reveal index={3} follow>
         <Text style={[text.caption, styles.header]}>מסלול הקבלה</Text>
         <View style={styles.pathCard}>
           <StagePath stages={state.stages} />
         </View>
       </Reveal>
 
-      <Reveal index={3} follow>
+      <Reveal index={4} follow>
         {/* ---- האימון של היום ---- */}
         {todays.length === 0 ? (
           <>

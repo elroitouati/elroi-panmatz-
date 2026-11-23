@@ -9,6 +9,7 @@ import ProgressBar from '../components/ProgressBar';
 import MiniChart from '../components/MiniChart';
 import EmptyState from '../components/EmptyState';
 import Reveal from '../components/Reveal';
+import Flow from '../components/Flow';
 import ValueSheet from '../sheets/ValueSheet';
 import EditGoalSheet from '../sheets/EditGoalSheet';
 import { colors, radius, space } from '../design/tokens';
@@ -38,8 +39,11 @@ function GoalCard({ goal, todayDone, isNext, onEdit, onBump, onLower, onMark, on
   const maxed = reachedFinal(goal) || goal.maintenance;
   const days = goal.trainingDays.map((d) => HEB_WEEKDAYS_SHORT[d]).join(' · ');
 
+  // היעד הבא בתור — על הרקע הזורם (הכרטיס הראשי של המסך)
+  const Wrap = isNext ? Flow : View;
+  const wrapProps = isNext ? { variant: 'olive', radius: radius.card } : {};
   return (
-    <View style={[styles.card, !goal.enabled && styles.paused]}>
+    <Wrap {...wrapProps} style={[styles.card, isNext && styles.cardFlow, !goal.enabled && styles.paused]}>
       <View style={styles.head}>
         <View style={styles.headText}>
           <View style={styles.titleRow}>
@@ -93,7 +97,7 @@ function GoalCard({ goal, todayDone, isNext, onEdit, onBump, onLower, onMark, on
       {measured && (goal.history || []).length >= 2 ? (
         <View style={styles.chart}><MiniChart goal={goal} /></View>
       ) : null}
-    </View>
+    </Wrap>
   );
 }
 
@@ -190,6 +194,7 @@ export default function FitnessScreen() {
 const styles = StyleSheet.create({
   list: { gap: space[4] },
   card: { backgroundColor: colors.group, borderRadius: radius.card, padding: space[5], gap: space[4] },
+  cardFlow: { backgroundColor: undefined },
   paused: { opacity: 0.55 },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginEnd: -space[2], marginTop: -space[1] },
   headText: { flex: 1, minWidth: 0, gap: 2 },

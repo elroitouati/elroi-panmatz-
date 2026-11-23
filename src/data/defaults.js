@@ -6,7 +6,7 @@
 // עודכן לפי הפרטים מההרשמה (נובמבר 2026): נרשמת, יום פתוח ב-22.11,
 // מבחן מקוון (מועדים ייפתחו), חצי יום שדה בפנימייה, הכנה בקיץ 22.6–7.7,
 // ותחילת הלימודים בשבוע האחרון של אוגוסט.
-export const STAGES_VERSION = 2;
+export const STAGES_VERSION = 3;
 
 export const DEFAULT_STAGES = [
   {
@@ -31,7 +31,7 @@ export const DEFAULT_STAGES = [
     name: 'מבחן מקוון',
     icon: 'laptop-outline',
     defaultLabel: 'המועד ייפתח בקרוב',
-    note: 'פסיכוטכני · מתמטיקה · אנגלית · עברית',
+    note: 'מבחן פסיכוטכני ממוחשב · כ־3 שעות · 8 סוגי שאלות',
     date: null, // ISO day key כשנודע התאריך האמיתי
   },
   {

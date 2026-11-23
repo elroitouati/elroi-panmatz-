@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, space } from '../design/tokens';
+import Flow from './Flow';
 import { text } from '../design/typography';
 import { WORKOUTS, workoutFor } from '../utils/weekPlan';
 import { HEB_WEEKDAYS_SHORT, HEB_WEEKDAYS_FULL } from '../utils/date';
@@ -20,7 +21,7 @@ export default function TodayPlan({ plan, onEditDay }) {
   const tomorrow = WORKOUTS[workoutFor(plan, (today + 1) % 7)];
 
   return (
-    <View style={styles.card}>
+    <Flow variant="olive" radius={radius.card} style={styles.card}>
       <View style={styles.top}>
         <View style={[styles.badge, rest && styles.badgeRest]}>
           <Ionicons name={w.icon} size={26} color={rest ? colors.ink2 : colors.gold} />
@@ -60,13 +61,13 @@ export default function TodayPlan({ plan, onEditDay }) {
           );
         })}
       </View>
-    </View>
+    </Flow>
   );
 }
 
 const DOT = 36;
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.group, borderRadius: radius.card, padding: space[4], gap: space[4], marginBottom: space[4] },
+  card: { padding: space[4] + 2, gap: space[4], marginBottom: space[4] },
   top: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   badge: {
     width: 56, height: 56, borderRadius: radius.pill, backgroundColor: colors.goldSoft,
@@ -77,13 +78,13 @@ const styles = StyleSheet.create({
   gold: { color: colors.gold },
   week: {
     flexDirection: 'row', paddingTop: space[3],
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(245,242,230,0.16)',
   },
   col: { flex: 1, alignItems: 'center', gap: 6, minHeight: 44 },
   letter: { textAlign: 'center' },
   letterToday: { color: colors.gold, fontFamily: 'Heebo_700Bold' },
   dot: {
-    width: DOT, height: DOT, borderRadius: DOT / 2, backgroundColor: colors.bgDeep,
+    width: DOT, height: DOT, borderRadius: DOT / 2, backgroundColor: 'rgba(20,26,12,0.35)',
     alignItems: 'center', justifyContent: 'center',
   },
   dotToday: { backgroundColor: colors.gold },

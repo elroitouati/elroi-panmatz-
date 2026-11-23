@@ -29,6 +29,9 @@ import FitnessScreen from './src/screens/FitnessScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import PsychScreen from './src/screens/PsychScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import { ExamProvider } from './src/exam/ExamContext';
+import { GateProvider, navRef, useGate } from './src/exam/Gate';
+import ExamRoot from './src/exam/ExamRoot';
 
 // כיוון RTL מלא. נקרא לפני הרכיב הראשון; נכנס לתוקף מהרצה הבאה של האפליקציה.
 I18nManager.allowRTL(true);
@@ -60,6 +63,7 @@ const navTheme = {
 };
 
 function Tabs() {
+  const gate = useGate();
   return (
     <Tab.Navigator
       tabBarPosition="bottom"
@@ -81,7 +85,12 @@ function Tabs() {
       <Tab.Screen name="היום" component={HomeScreen} />
       <Tab.Screen name="כושר" component={FitnessScreen} />
       <Tab.Screen name="הלוח שלי" component={CalendarScreen} />
-      <Tab.Screen name="מבחן" component={PsychScreen} />
+      {/* לחיצה על "מבחן" לא מחליפה טאב — היא פותחת את גיליון הכניסה לעולם המבחן */}
+      <Tab.Screen
+        name="מבחן"
+        component={PsychScreen}
+        listeners={{ tabPress: (e) => { e.preventDefault(); gate.open(); } }}
+      />
     </Tab.Navigator>
   );
 }
@@ -95,7 +104,8 @@ function Root() {
   return (
     <>
       <SheetHost>
-        <NavigationContainer theme={navTheme}>
+        <GateProvider>
+        <NavigationContainer theme={navTheme} ref={navRef}>
           <RootStack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
             <RootStack.Screen name="Tabs" component={Tabs} />
             {/* הגדרות עולות מלמטה, כמו גיליון — הן משימה צדדית, לא עוד שכבה בהיררכיה */}
@@ -104,8 +114,15 @@ function Root() {
               component={SettingsScreen}
               options={{ animation: 'slide_from_bottom' }}
             />
+            {/* עולם המבחן: עמעום מעל הזית, והעולם עצמו "צולל" פנימה (ExamRoot) */}
+            <RootStack.Screen
+              name="Exam"
+              component={ExamRoot}
+              options={{ animation: 'fade', contentStyle: { backgroundColor: '#F5F6F8' } }}
+            />
           </RootStack.Navigator>
         </NavigationContainer>
+        </GateProvider>
       </SheetHost>
       <Toast message={toast} />
       <Celebration goal={celebration} onClose={dismissCelebration} />
@@ -135,7 +152,9 @@ export default function App() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         <AppProvider>
-          <Root />
+          <ExamProvider>
+            <Root />
+          </ExamProvider>
         </AppProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
