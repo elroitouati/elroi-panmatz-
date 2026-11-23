@@ -13,13 +13,17 @@ import { ltr } from '../design/rtl';
 //  הושלם (השלמה) = טבעת זהב + חץ מעגלי
 //  היום = טבעת שמנת · עתידי/מנוחה = ספרה עמומה.
 //  מתחת לעיגול: אייקון האימון שמתוכנן ביום הזה (משקולת / רץ).
+//  ונקודה כחולה = פסיכוטכני: מלאה = כל המשימות, טבעת = חלקי / פספוס,
+//  שעון עצר כחול = יום סימולציה מלאה.
 //  סימון "בוצע" ממלא את העיגול ב-180ms (מצב משתנה — state indication),
 //  כמעבר ולא keyframes, כך שביטול באמצע מתהפך מהמקום. לחיצה מכווצת ל-0.92.
 // ============================================================================
 
 const SIZE = 34;
 
-export default function DayCell({ day, status, isToday, planIcon, onPress, label }) {
+export const EXAM_BLUE = '#9DBCE6';
+
+export default function DayCell({ day, status, isToday, planIcon, onPress, label, exam }) {
   const reduced = useReducedMotion();
   const done = status === 'done';
   const d = useSharedValue(done ? 1 : 0);
@@ -73,12 +77,23 @@ export default function DayCell({ day, status, isToday, planIcon, onPress, label
           <Ionicons name={planIcon} size={11} color={iconColor} />
         ) : null}
       </View>
+      <View style={styles.examRow}>
+        {exam?.kind === 'sim' && (exam.status === 'future' || exam.status === 'today') ? (
+          <Ionicons name="stopwatch" size={10} color={EXAM_BLUE} />
+        ) : exam?.status === 'done' ? (
+          <View style={[styles.dot, { backgroundColor: EXAM_BLUE, borderColor: EXAM_BLUE }]} />
+        ) : exam?.status === 'partial' ? (
+          <View style={[styles.dot, { borderColor: EXAM_BLUE }]} />
+        ) : exam?.status === 'missed' ? (
+          <View style={[styles.dot, { borderColor: 'rgba(157,188,230,0.45)' }]} />
+        ) : null}
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, alignItems: 'center', paddingVertical: 3, minHeight: 52 },
+  wrap: { flex: 1, alignItems: 'center', paddingVertical: 3, minHeight: 60 },
   circle: {
     width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
@@ -89,4 +104,6 @@ const styles = StyleSheet.create({
   },
   bold: { fontFamily: type.family.bold },
   iconRow: { height: 14, marginTop: 2, alignItems: 'center', justifyContent: 'center' },
+  examRow: { height: 10, alignItems: 'center', justifyContent: 'center' },
+  dot: { width: 7, height: 7, borderRadius: 4, borderWidth: 1.5 },
 });

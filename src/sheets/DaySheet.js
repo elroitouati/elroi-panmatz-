@@ -28,7 +28,14 @@ const STATUS = {
   rest: { label: 'מנוחה', color: colors.ink2, bg: colors.bgDeep, icon: 'moon' },
 };
 
-export default function DaySheet({ target, state, onClose, onSetTrained, onSetExcused, onSetMadeUp }) {
+const EXAM_STATUS = {
+  done: 'כל המשימות הושלמו', partial: 'חלק מהמשימות', missed: 'לא נעשה — המערכת משלימה בימים הבאים',
+  today: 'היום', future: 'מתוכנן', off: 'יום חופש מפסיכוטכני',
+};
+const EXAM_BLUE = '#9DBCE6';
+const MODE = { weekly: 'בדיקה שבועית', sim: 'סימולציה מלאה', diagnostic: 'אבחון פתיחה', daily: 'תרגול מעורב', errors: 'חזרה על טעויות', topic: 'תרגול נושא' };
+
+export default function DaySheet({ target, state, exam, onClose, onSetTrained, onSetExcused, onSetMadeUp }) {
   const last = useRef(target);
   if (target) last.current = target;
   const t = last.current;
@@ -84,6 +91,30 @@ export default function DaySheet({ target, state, onClose, onSetTrained, onSetEx
           {psych ? (
             <Row title="תרגול פסיכוטכני" leading={<Ionicons name="bulb" size={22} color={colors.gold} />} />
           ) : null}
+        </Section>
+      ) : null}
+
+      {exam && exam.status !== 'none' ? (
+        <Section title={`פסיכוטכני · ${EXAM_STATUS[exam.status] || ''}`}>
+          {exam.status === 'off' ? (
+            <Row title="יום חופש" leading={<Ionicons name="moon-outline" size={22} color={EXAM_BLUE} />} />
+          ) : null}
+          {(exam.tasks || []).map((tk) => (
+            <Row
+              key={tk.id}
+              title={tk.title}
+              value={`${ltr(tk.minutes)} דק׳`}
+              leading={<Ionicons name={exam.done?.[tk.id] ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={EXAM_BLUE} />}
+            />
+          ))}
+          {(exam.sessions || []).filter((s) => s.mode === 'weekly' || s.mode === 'sim' || s.mode === 'diagnostic').map((s) => (
+            <Row
+              key={s.id}
+              title={`תוצאה: ${MODE[s.mode]}`}
+              value={ltr(`${Math.round((s.correct / Math.max(1, s.n)) * 100)}%`)}
+              leading={<Ionicons name="stats-chart" size={20} color={EXAM_BLUE} />}
+            />
+          ))}
         </Section>
       ) : null}
 

@@ -261,6 +261,30 @@ ok(!brain.planForDay({ ...base, settings: { ...base.settings, startDate: '2026-1
   ok(brain.decisions(S1, '2026-11-27').some((d) => /פוספסו/.test(d.text)), 'ההחלטות מסבירות את ההשלמה');
 }
 
+// ---- יום חופש קבוע (שבת) ----
+{
+  const W = { ...base, diagnosticDone: true, settings: { ...base.settings, startDate: '2026-11-24', weeklyOff: [6], onDays: [] },
+    sessions: [{ id: 'd', mode: 'diagnostic', complete: true, d: '2026-11-24', t: 1 }], attempts: [{ topic: 'vocab', ok: true, ms: 9000, d: '2026-11-24' }] };
+  ok(brain.planForDay(W, '2026-11-28').off, 'שבת = חופש');
+  ok(!brain.planForDay({ ...W, settings: { ...W.settings, onDays: ['2026-11-28'] } }, '2026-11-28').off, 'בכל זאת להתאמן בשבת');
+  ok(brain.catchUp(W, '2026-11-30').debt === brain.catchUp({ ...W, daily: {} }, '2026-11-30').debt, 'ok');
+  const c = brain.catchUp(W, '2026-11-29');
+  ok(!c.weeklyDue || c.weeklyDue === '2026-11-27', 'בדיקה שבועית שפוספסה בשישי לא נופלת על שבת');
+  ok(brain.planForDay(W, '2026-11-28').tasks.length === 0, 'אין משימות בשבת');
+  ok(brain.planForDay(W, '2026-11-29').tasks[0].id === 'weekly', 'בדיקה שפוספסה בשישי עוברת לראשון (שבת חופש)');
+  // סטטוס יום ללוח
+  const D = { ...W, daily: { '2026-11-25': { plan: { tasks: [{ id: 'a', minutes: 5 }, { id: 'b', minutes: 20 }] }, done: { a: true, b: true } },
+    '2026-11-26': { plan: { tasks: [{ id: 'a', minutes: 5 }, { id: 'b', minutes: 20 }] }, done: { a: true } } } };
+  ok(brain.examDay(D, '2026-11-25', '2026-11-30').status === 'done', 'לוח: יום שהושלם');
+  ok(brain.examDay(D, '2026-11-26', '2026-11-30').status === 'partial', 'לוח: יום חלקי');
+  ok(brain.examDay(D, '2026-11-27', '2026-11-30').status === 'missed', 'לוח: יום שלא נפתח');
+  ok(brain.examDay(D, '2026-11-28', '2026-11-30').status === 'off', 'לוח: שבת חופש');
+  ok(brain.examDay(D, '2026-11-23', '2026-11-30').status === 'none', 'לוח: לפני ההתחלה');
+  ok(brain.examDay(D, '2026-12-18', '2026-11-30').kind === 'sim', 'לוח: יום סימולציה עתידי');
+  const ms = brain.examMonthStats(D, ['2026-11-24', '2026-11-25', '2026-11-26', '2026-11-27', '2026-11-28', '2026-11-29'], '2026-11-30');
+  ok(ms.due === 5 && ms.done === 1, `סיכום חודשי ${ms.done}/${ms.due}`);
+}
+
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 fs.rmSync(tmp, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);

@@ -201,6 +201,14 @@ export function startOf(state) {
   return state.settings?.startDate || state.createdAt;
 }
 
+// יום חופש: חופש חד-פעמי (offDays), או יום קבוע בשבוע (weeklyOff, ברירת מחדל שבת),
+// אלא אם בחרת להתאמן בו בכל זאת (onDays)
+export function isOffDay(state, day) {
+  const st = state.settings || {};
+  if ((st.onDays || []).includes(day)) return false;
+  return (st.offDays || []).includes(day) || (st.weeklyOff || []).includes(weekdayOf(day));
+}
+
 const MAX_EXTRA = 15;   // תוספת השלמה מקסימלית ליום (דקות)
 const MAX_DAY = 45;     // תקרת יום רגיל
 const CATCH_WINDOW = 14;
@@ -222,11 +230,11 @@ export function catchUp(state, day) {
   const diag = (state.sessions || []).filter((s) => s.mode === 'diagnostic' && s.complete).map((s) => s.d).sort()[0]
     || (state.attempts || []).map((a) => a.d).filter(Boolean).sort()[0];
   if (!diag) return out;
-  const off = new Set(state.settings.offDays || []);
+  const offAt = (d) => isOffDay(state, d);
   let missed = 0, paid = 0;
   for (let i = CATCH_WINDOW; i >= 1; i--) {
     const d = addDays(day, -i);
-    if (d < start || d <= diag || off.has(d)) continue;
+    if (d < start || d <= diag || offAt(d)) continue;
     const saved = state.daily?.[d];
     const plan = saved?.plan;
     const done = saved?.done || {};
@@ -251,15 +259,15 @@ export function catchUp(state, day) {
   for (let i = 1; i <= 6; i++) {
     const d = addDays(day, -i);
     if (weekdayOf(d) !== 5) continue;
-    if (d >= start && !off.has(d) && !isSimDay(state, d) && !doneSince('weekly', d)) out.weeklyDue = d;
+    if (d >= start && !offAt(d) && !isSimDay(state, d) && !doneSince('weekly', d)) out.weeklyDue = d;
     break;
   }
   // סימולציה שפוספסה (עד 10 ימים אחורה)
   for (const s of (state.settings.simDates || []).slice().sort()) {
-    if (s >= day || s < start || dayDiff(s, day) > 10 || off.has(s)) continue;
+    if (s >= day || s < start || dayDiff(s, day) > 10 || offAt(s)) continue;
     if (doneSince('sim', s)) continue;
     const wd = weekdayOf(day);
-    if (wd === 5 || wd === 6 || dayDiff(s, day) >= 3) out.simDue = s;
+    if (wd === 5 || wd === 6 || dayDiff(s, day) >= 2) out.simDue = s;
   }
   return out;
 }
@@ -269,9 +277,8 @@ export function planForDay(state, day, opts = {}) {
   if (day < start) return { minutes: 0, tasks: [], notStarted: true, startDate: start };
   const minutes = dailyMinutes(state, day);
   const wd = weekdayOf(day);
-  const off = (state.settings.offDays || []).includes(day);
   const tasks = [];
-  if (off) return { minutes: 0, tasks, off: true };
+  if (isOffDay(state, day)) return { minutes: 0, tasks, off: true };
 
   if (!state.diagnosticDone) {
     tasks.push({ id: 'diagnostic', kind: 'quiz', mode: 'diagnostic', title: 'אבחון פתיחה', sub: '24 שאלות מכל הנושאים', minutes: 25, count: 24 });
@@ -393,3 +400,39 @@ export function fmtDay(k) {
 }
 
 export { addDays, subName };
+
+// ---------------------------------------------------------------------------
+//  סטטוס יום ללוח החודשי של פנמ"צ
+//  done = כל המשימות · partial = חלק · missed = כלום · off = חופש · today/future
+//  kind = 'sim' | 'weekly' | null (מה מיוחד ביום הזה)
+// ---------------------------------------------------------------------------
+export function examDay(state, day, today) {
+  if (!state) return { status: 'none' };
+  if (day < startOf(state)) return { status: 'none' };
+  if (isOffDay(state, day)) return { status: 'off' };
+  const saved = state.daily?.[day];
+  const plan = saved?.plan || (day >= today ? planForDay(state, day, { noCatch: day !== today }) : null);
+  const kind = plan?.sim ? 'sim' : plan?.weekly ? 'weekly' : isSimDay(state, day) ? 'sim' : weekdayOf(day) === 5 ? 'weekly' : null;
+  const done = saved?.done || {};
+  const tasks = plan?.tasks || [];
+  const n = tasks.filter((t) => done[t.id]).length;
+  const sessions = (state.sessions || []).filter((s) => s.d === day && s.complete);
+  if (day > today) return { status: 'future', kind, tasks, done, sessions };
+  if (tasks.length && n === tasks.length) return { status: 'done', kind, tasks, done, sessions };
+  if (day === today) return { status: 'today', kind, tasks, done, sessions };
+  if (n > 0) return { status: 'partial', kind, tasks, done, sessions };
+  return { status: 'missed', kind, tasks, done, sessions };
+}
+
+export function examMonthStats(state, keys, today) {
+  let done = 0, due = 0;
+  for (const k of keys) {
+    if (!k || k > today) continue;
+    const s = examDay(state, k, today).status;
+    if (s === 'none' || s === 'off') continue;
+    if (k === today && s !== 'done') continue;
+    due++;
+    if (s === 'done') done++;
+  }
+  return { done, due };
+}

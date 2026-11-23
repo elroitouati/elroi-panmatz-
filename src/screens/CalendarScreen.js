@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, useReducedMotion } from 'react-native-reanimated';
 import Screen from '../components/Screen';
 import IconButton from '../components/IconButton';
-import DayCell from '../components/DayCell';
+import DayCell, { EXAM_BLUE } from '../components/DayCell';
+import { useExam } from '../exam/ExamContext';
+import { examDay, examMonthStats } from '../exam/engine/brain';
 import Reveal from '../components/Reveal';
 import Flow from '../components/Flow';
 import { Section, Row } from '../components/Group';
@@ -30,6 +32,8 @@ const plural = (n, one, many) => `${ltr(n)} ${n === 1 ? one : many}`;
 
 export default function CalendarScreen() {
   const { state, setDayTrained, setDayExcused, setDayMadeUp } = useApp();
+  const ex = useExam();
+  const exam = ex?.state || null;
   const reduced = useReducedMotion();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -50,8 +54,9 @@ export default function CalendarScreen() {
       month: rangeStats(weeks.flat(), ...args),
       streak: currentStreak(...args),
       best: bestStreak(...args),
+      exam: exam ? examMonthStats(exam, weeks.flat(), today) : null,
     };
-  }, [weeks, state, today]);
+  }, [weeks, state, today, exam]);
 
   if (!state) return null;
 
@@ -99,8 +104,10 @@ export default function CalendarScreen() {
                     key, today, startedAt: state.startedAt,
                   });
                   const type = workoutFor(state.weekPlan, d.getDay());
+                  const ed = exam ? examDay(exam, key, today) : null;
                   return (
                     <DayCell
+                      exam={ed}
                       key={di}
                       day={d.getDate()}
                       status={status}
@@ -122,6 +129,11 @@ export default function CalendarScreen() {
             <Legend swatch={styles.lgMissed} label="פספוס" />
             <Legend swatch={styles.lgMadeUp} label="הושלם" />
             <Legend swatch={styles.lgExcused} label="מוצדק" />
+          </View>
+          <View style={styles.legend}>
+            <Legend swatch={styles.lgExamDone} label="פסיכוטכני הושלם" />
+            <Legend swatch={styles.lgExamPart} label="חלקי / לא נעשה" />
+            <LegendIcon icon="stopwatch" label="סימולציה" color={EXAM_BLUE} />
           </View>
           <View style={styles.legend}>
             <LegendIcon icon={WORKOUTS.strength.icon} label="כוח" />
@@ -157,6 +169,15 @@ export default function CalendarScreen() {
             valueStyle={m.adherence >= 80 ? styles.gold : null}
             leading={<Ionicons name="checkmark-done-outline" size={20} color={colors.ink2} />}
           />
+          {stats.exam && stats.exam.due ? (
+            <Row
+              title="פסיכוטכני"
+              subtitle="ימים שבהם כל המשימות הושלמו"
+              value={`${ltr(stats.exam.done)}/${ltr(stats.exam.due)}`}
+              valueStyle={stats.exam.done === stats.exam.due ? styles.gold : null}
+              leading={<Ionicons name="reader-outline" size={20} color={EXAM_BLUE} />}
+            />
+          ) : null}
           {m.madeUp ? (
             <Row
               title="השלמות"
@@ -178,6 +199,7 @@ export default function CalendarScreen() {
       <DaySheet
         target={openDay}
         state={state}
+        exam={openDay && exam ? examDay(exam, openDay.key, today) : null}
         onClose={() => setOpenDay(null)}
         onSetTrained={setDayTrained}
         onSetExcused={setDayExcused}
@@ -196,10 +218,10 @@ function Legend({ swatch, label }) {
   );
 }
 
-function LegendIcon({ icon, label }) {
+function LegendIcon({ icon, label, color }) {
   return (
     <View style={styles.legendItem}>
-      <Ionicons name={icon} size={12} color={colors.ink2} />
+      <Ionicons name={icon} size={12} color={color || colors.ink2} />
       <Text style={text.caption}>{label}</Text>
     </View>
   );
@@ -219,6 +241,8 @@ const styles = StyleSheet.create({
   lgMissed: { borderColor: colors.red },
   lgMadeUp: { borderColor: colors.gold },
   lgExcused: { backgroundColor: colors.bgDeep, borderColor: colors.ink3 },
+  lgExamDone: { width: 9, height: 9, backgroundColor: EXAM_BLUE, borderColor: EXAM_BLUE },
+  lgExamPart: { width: 9, height: 9, borderColor: EXAM_BLUE },
   hint: { paddingHorizontal: space[4], paddingTop: space[2] },
   gold: { color: colors.gold, fontFamily: 'Heebo_700Bold' },
 });

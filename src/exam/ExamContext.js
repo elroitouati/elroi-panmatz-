@@ -3,7 +3,7 @@ import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { keyOf, addDays } from './engine/time';
 import { review as srsReview, isDue } from './engine/srs';
-import { planForDay, readiness, trimAttempts, wordDeck, startOf } from './engine/brain';
+import { planForDay, readiness, trimAttempts, wordDeck, startOf, isOffDay } from './engine/brain';
 import { scheduleStudyReminders, scheduleEvening } from './notify';
 import { mergeExam } from './engine/merge';
 import { attachExamSync, notifyExamChanged } from './examSync';
@@ -36,6 +36,8 @@ export function defaultExamState(today = keyOf(), resetAt = 0) {
       evening: { hour: 20, minute: 30 },
       simDates: ['2026-12-18', '2027-01-08', '2027-01-22'],
       offDays: [],
+      weeklyOff: [6],   // שבת — יום חופש קבוע מפסיכוטכני
+      onDays: [],       // ימי חופש שבחרת בכל זאת להתאמן בהם
     },
     attempts: [],
     sessions: [],
@@ -70,6 +72,12 @@ export function ExamProvider({ children }) {
         next.settings = { ...next.settings, startDate: next.attempts.length ? next.createdAt : addDays(today, 1) };
         next.settingsAt = Date.now();
         if (!next.attempts.length && next.daily?.[today]) { const d = { ...next.daily }; delete d[today]; next.daily = d; }
+      }
+      // יום חופש קבוע בשבת (בקשה מפורשת) — למי שעוד אין לו הגדרה
+      if (!next.weeklyOffSet) {
+        next.weeklyOffSet = true;
+        next.settings = { ...next.settings, weeklyOff: next.settings.weeklyOff || [6], onDays: next.settings.onDays || [] };
+        next.settingsAt = Date.now();
       }
       // תיקון חד-פעמי: הגרסה נפתחה לראשונה אחרי חצות, ולכן "מחר" נקבע ל-25.11.
       // הבקשה הייתה להתחיל ב-24.11 — אם עוד לא התחלת, מחזירים את ההתחלה ל-24.11.
@@ -117,16 +125,17 @@ export function ExamProvider({ children }) {
   }, [state, today]);
 
   // תזכורות לימוד — כשההגדרות משתנות
-  const settingsKey = state ? JSON.stringify([state.settings.notify, state.settings.studyByDay, state.settings.dailyMinutes]) : '';
+  const settingsKey = state ? JSON.stringify([state.settings.notify, state.settings.studyByDay, state.settings.dailyMinutes, state.settings.weeklyOff]) : '';
   useEffect(() => { if (state && NATIVE) scheduleStudyReminders(state.settings); }, [settingsKey]);
 
   // תזכורת ערב — כשההתקדמות היומית משתנה
   const dayData = state?.daily?.[today];
   const remaining = dayData?.plan ? dayData.plan.tasks.filter((t) => !dayData.done?.[t.id]) : [];
-  const eveningKey = state ? JSON.stringify([today, remaining.map((t) => t.id), state.settings.evening, state.settings.notify, state.settings.offDays.includes(today)]) : '';
+  const offToday = state ? isOffDay(state, today) : false;
+  const eveningKey = state ? JSON.stringify([today, remaining.map((t) => t.id), state.settings.evening, state.settings.notify, offToday]) : '';
   useEffect(() => {
     if (!state || !dayData?.plan || !NATIVE) return;
-    scheduleEvening(state.settings, state.settings.offDays.includes(today) ? [] : remaining, today);
+    scheduleEvening(state.settings, offToday ? [] : remaining, today);
   }, [eveningKey]);
 
   // ---------------------------------------------------------------------------
@@ -221,9 +230,10 @@ export function ExamProvider({ children }) {
   const setOffToday = useCallback((off) => {
     const day = keyOf();
     setState((s) => {
-      const set = new Set(s.settings.offDays);
-      if (off) set.add(day); else set.delete(day);
-      return { ...s, settings: { ...s.settings, offDays: [...set].sort() }, settingsAt: Date.now() };
+      const offs = new Set(s.settings.offDays || []);
+      const ons = new Set(s.settings.onDays || []);
+      if (off) { offs.add(day); ons.delete(day); } else { offs.delete(day); ons.add(day); }
+      return { ...s, settings: { ...s.settings, offDays: [...offs].sort(), onDays: [...ons].sort().slice(-30) }, settingsAt: Date.now() };
     });
   }, []);
 
@@ -258,6 +268,6 @@ export function useToday() {
   const saved = today >= startOf(state) ? state.daily?.[today] : null;
   const plan = saved?.plan || planForDay(state, today);
   const done = saved?.done || {};
-  const off = state.settings.offDays.includes(today);
+  const off = !!plan.off;
   return { plan, done, off, finished: plan.tasks.filter((t) => done[t.id]).length, total: plan.tasks.length };
 }

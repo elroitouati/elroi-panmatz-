@@ -25,7 +25,7 @@ export async function scheduleStudyReminders(settings) {
     if (!ok) return;
     for (let wd = 0; wd <= 6; wd++) {
       const t = settings.studyByDay?.[wd];
-      if (!t) continue;
+      if (!t || (settings.weeklyOff || []).includes(wd)) continue;
       const friday = wd === 5;
       await Notifications.scheduleNotificationAsync({
         identifier: `exam-study-${wd}`,

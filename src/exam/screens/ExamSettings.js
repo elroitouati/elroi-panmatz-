@@ -11,7 +11,7 @@ import { useX, SectionTitle, font } from '../ui';
 import { useExam } from '../ExamContext';
 import { addDays, weekdayOf } from '../engine/time';
 import { fmtDay } from '../engine/brain';
-import { HEB_WEEKDAYS_FULL } from '../../utils/date';
+import { HEB_WEEKDAYS_FULL, HEB_WEEKDAYS_SHORT } from '../../utils/date';
 import { haptic } from '../../design/haptics';
 
 // ============================================================================
@@ -102,6 +102,26 @@ export default function ExamSettings({ navigation }) {
             <Text style={t.sub}>{st.simDates.map(fmtDay).join(' · ')}</Text>
           </View>
         </View>
+
+        <SectionTitle>יום חופש קבוע</SectionTitle>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          {[0, 1, 2, 3, 4, 5, 6].map((d) => {
+            const on = (st.weeklyOff || []).includes(d);
+            return (
+              <Press key={d} wrapStyle={{ flex: 1 }} scaleTo={0.94} accessibilityLabel={`יום ${HEB_WEEKDAYS_FULL[d]}${on ? ', יום חופש' : ''}`} accessibilityState={{ selected: on }}
+                onPress={() => {
+                  haptic.selection();
+                  const set = new Set(st.weeklyOff || []);
+                  if (on) set.delete(d); else set.add(d);
+                  updateSettings({ weeklyOff: [...set].sort() });
+                }}
+                style={{ height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.deep : c.surface, borderWidth: 1, borderColor: on ? c.deep : c.mist }}>
+                <Text style={{ fontFamily: font.b, fontSize: 17, color: on ? c.onDeep : c.ink }}>{HEB_WEEKDAYS_SHORT[d]}</Text>
+              </Press>
+            );
+          })}
+        </View>
+        <Text style={[t.sub, { marginTop: 8, marginHorizontal: 4 }]}>ביום הזה אין משימות ואין תזכורות לפסיכוטכני, והוא לא נחשב פספוס. אפשר בכל זאת להתאמן בו ממסך היום.</Text>
 
         <SectionTitle>זמן לימוד יומי</SectionTitle>
         <Seg value={st.dailyMinutes} options={[[20, '20'], [30, '30'], [40, '40'], [45, '45']]} onChange={(v) => updateSettings({ dailyMinutes: v })} />
