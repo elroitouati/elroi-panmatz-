@@ -17,7 +17,8 @@ import {
   rowsForRange,
   diffRows,
   enqueue,
-  applyDone,
+  applyRemoteDone,
+  EXAM,
 } from '../utils/syncRows';
 
 const TABLE = 'panmatz_daily';
@@ -25,7 +26,7 @@ const META_KEY = 'elroi-panmatz-sync-v1'; // נפרד לגמרי ממפתח הנ
 const ts = (v) => (v ? new Date(v).getTime() : 0);
 
 let meta = null; // { pushed: { key: row }, queue: [row+updated_at] }
-let host = null; // { getState, update }
+let host = null; // { getState, update, getExamState, examPlanFor, onExamDone }
 let channel = null;
 let debounce = null;
 const listeners = new Set();
@@ -78,7 +79,12 @@ async function queueChanges(state) {
   const today = todayKey();
   const from = addDays(today, -SYNC_BACK_DAYS);
   const to = addDays(today, SYNC_FORWARD_DAYS);
-  const changed = diffRows(rowsForRange(state, from, to), meta.pushed, today, from, to);
+  // משימות הלימוד מגיעות ממצב עולם המבחן (מפתח נפרד). עד שהוא נטען — לא
+  // שולחים שורות exam וגם לא מוחקים את אלה שכבר נשלחו.
+  const exam = host?.getExamState?.() || null;
+  const current = rowsForRange(state, from, to, { exam, planFor: host?.examPlanFor, today });
+  const pushed = exam ? meta.pushed : Object.fromEntries(Object.entries(meta.pushed).filter(([, r]) => !String(r.goal_id).startsWith(EXAM)));
+  const changed = diffRows(current, pushed, today, from, to);
   if (!changed.length) return;
   const updated_at = new Date().toISOString();
   changed.forEach((r) => {
@@ -152,7 +158,11 @@ async function applyRemoteRows(rows) {
   });
   if (!touched) return;
   await saveMeta();
-  host?.update((s) => updates.reduce((acc, r) => applyDone(acc, r.date, r.goal_id, !!r.done), s));
+  // ניתוב לפי קידומת: exam: → עולם המבחן, stage: → שלב קבלה, אחרת → יעד אימון
+  const examMarks = updates.filter((r) => String(r.goal_id).startsWith(EXAM));
+  const others = updates.filter((r) => !String(r.goal_id).startsWith(EXAM));
+  if (others.length) host?.update((s) => others.reduce((acc, r) => applyRemoteDone(acc, r.date, r.goal_id, !!r.done), s));
+  examMarks.forEach((r) => host?.onExamDone?.(r.goal_id.slice(EXAM.length), r.date, !!r.done));
 }
 
 async function pull() {
@@ -208,9 +218,9 @@ function unsubscribe() {
 // ---------------------------------------------------------------------------
 //  חיבור לאפליקציה (נקרא פעם אחת מ-AppContext)
 // ---------------------------------------------------------------------------
-export function attachSync({ getState, update }) {
+export function attachSync({ getState, update, getExamState, examPlanFor, onExamDone }) {
   if (!supabaseConfigured) return () => {};
-  host = { getState, update };
+  host = { getState, update, getExamState, examPlanFor, onExamDone };
   const start = (user) => {
     setStatus({ user });
     if (user) subscribe(user);

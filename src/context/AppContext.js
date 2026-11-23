@@ -22,6 +22,7 @@ import {
   sendReinforcement,
 } from '../notifications';
 import { attachSync, notifyStateChanged } from '../sync/panmatzSync';
+import { examApi } from '../exam/bridge';
 
 const AppContext = createContext(null);
 
@@ -130,6 +131,10 @@ export function AppProvider({ children }) {
     () => attachSync({
       getState: () => stateRef.current,
       update: (fn) => setState((s) => (s ? fn(s) : s)),
+      // משימות הלימוד הפסיכוטכני — דרך הגשר של עולם המבחן
+      getExamState: () => examApi()?.getState() || null,
+      examPlanFor: (day) => examApi()?.planFor(day),
+      onExamDone: (taskId, day, done) => examApi()?.setTaskDone(taskId, day, done),
     }),
     []
   );

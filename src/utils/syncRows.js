@@ -1,5 +1,10 @@
 // לוגיקה טהורה לסנכרון עם My Day: אילו שורות לשלוח, ואיך להחיל סימון שהגיע מהצד השני.
-// שורה = { date, goal_id, title, target, done, deleted } — אחת לכל יעד בכל יום אימון.
+// שורה = { date, goal_id, title, target, done, deleted }.
+// הסוג נקבע לפי קידומת ב-goal_id:
+//   (בלי קידומת) — יעד אימון, כמו תמיד
+//   exam:<task.id> — משימת לימוד פסיכוטכני (title = task.title, target = task.sub)
+//   stage:<stage.id> — שלב קבלה עם תאריך (done = stage.completed)
+//   task:<id> — כל משימה נוספת עם תאריך (state.tasks)
 import { dayKey, keyToDate } from './date';
 import { formatValue, unitLabel } from './fitness';
 
@@ -38,13 +43,66 @@ export function rowsForDate(state, dateKey) {
     }));
 }
 
-export function rowsForRange(state, fromKey, toKey) {
+export const EXAM = 'exam:';
+export const STAGE = 'stage:';
+export const TASK = 'task:';
+
+// מזהה שורה → סוג + מזהה פנימי
+export function parseGoalId(goalId) {
+  const id = String(goalId || '');
+  if (id.startsWith(EXAM)) return { type: 'exam', id: id.slice(EXAM.length) };
+  if (id.startsWith(STAGE)) return { type: 'stage', id: id.slice(STAGE.length) };
+  if (id.startsWith(TASK)) return { type: 'task', id: id.slice(TASK.length) };
+  return { type: 'goal', id };
+}
+
+// משימות הלימוד של יום: היום והעבר — מהתוכנית השמורה; ימים קדימה — הערכה (planFor)
+export function examRowsForDate(exam, dateKey, todayKey, planFor) {
+  if (!exam) return [];
+  const saved = exam.daily?.[dateKey]?.plan;
+  let tasks = [];
+  if (saved) tasks = saved.tasks || [];
+  else if (dateKey >= todayKey && planFor) tasks = planFor(dateKey)?.tasks || [];
+  const done = exam.daily?.[dateKey]?.done || {};
+  return tasks.map((t) => ({
+    date: dateKey,
+    goal_id: `${EXAM}${t.id}`,
+    title: t.title,
+    target: t.sub || '',
+    done: !!done[t.id],
+    deleted: false,
+  }));
+}
+
+// שלבי קבלה — רק שלבים שיש להם תאריך
+export function stageRows(stages) {
+  return (stages || [])
+    .filter((s) => s && s.date)
+    .map((s) => ({ date: s.date, goal_id: `${STAGE}${s.id}`, title: s.name, target: s.note || '', done: !!s.completed, deleted: false }));
+}
+
+// משימות נוספות עם תאריך (אם קיימות במצב)
+export function taskRows(tasks) {
+  return (tasks || [])
+    .filter((t) => t && t.id && t.date)
+    .map((t) => ({ date: t.date, goal_id: `${TASK}${t.id}`, title: t.title || '', target: t.note || '', done: !!t.done, deleted: false }));
+}
+
+// ctx = { exam, planFor, today } — בלי ctx: רק אימונים (כמו קודם)
+export function rowsForRange(state, fromKey, toKey, ctx = {}) {
   const out = {};
+  const today = ctx.today || dayKey(new Date());
   for (let k = fromKey; k <= toKey; k = addDays(k, 1)) {
     rowsForDate(state, k).forEach((r) => {
       out[rowKey(r)] = r;
     });
+    examRowsForDate(ctx.exam, k, today, ctx.planFor).forEach((r) => {
+      out[rowKey(r)] = r;
+    });
   }
+  [...stageRows(state.stages), ...taskRows(state.tasks)].forEach((r) => {
+    if (r.date >= fromKey && r.date <= toKey) out[rowKey(r)] = r;
+  });
   return out;
 }
 
@@ -86,4 +144,28 @@ export function applyDone(state, dateKey, goalId, done) {
   delete goalsLog[goalId];
   const stillTrained = Object.values(goalsLog).some((v) => v.done);
   return { ...state, logs: { ...state.logs, [dateKey]: { ...log, trained: stillTrained, goals: goalsLog } } };
+}
+
+// שלב קבלה שסומן ב-My Day
+export function applyStageDone(state, stageId, done) {
+  const st = (state.stages || []).find((s) => s.id === stageId);
+  if (!st || !!st.completed === !!done) return state;
+  return { ...state, stages: state.stages.map((s) => (s.id === stageId ? { ...s, completed: !!done } : s)) };
+}
+
+// משימה נוספת שסומנה ב-My Day
+export function applyTaskDone(state, taskId, done) {
+  const t = (state.tasks || []).find((x) => x.id === taskId);
+  if (!t || !!t.done === !!done) return state;
+  return { ...state, tasks: state.tasks.map((x) => (x.id === taskId ? { ...x, done: !!done } : x)) };
+}
+
+// סימון שהגיע מ-My Day → לאן הוא הולך. מחזיר את מצב פנמ"צ החדש;
+// סימון של משימת לימוד נשלח ל-onExam (ExamContext) ולא משנה את מצב פנמ"צ.
+export function applyRemoteDone(state, dateKey, goalId, done, onExam) {
+  const { type, id } = parseGoalId(goalId);
+  if (type === 'exam') { if (onExam) onExam(id, dateKey, !!done); return state; }
+  if (type === 'stage') return done ? applyStageDone(state, id, true) : state;
+  if (type === 'task') return applyTaskDone(state, id, done);
+  return applyDone(state, dateKey, id, done);
 }

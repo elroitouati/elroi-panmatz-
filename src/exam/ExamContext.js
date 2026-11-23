@@ -7,6 +7,8 @@ import { planForDay, readiness, trimAttempts, wordDeck, startOf, isOffDay } from
 import { scheduleStudyReminders, scheduleEvening } from './notify';
 import { mergeExam } from './engine/merge';
 import { attachExamSync, notifyExamChanged } from './examSync';
+import { setExamApi } from './bridge';
+import { notifyStateChanged as notifyMyDay } from '../sync/panmatzSync';
 
 const NATIVE = Platform.OS !== 'web'; // בדפדפן אין התראות מקומיות
 
@@ -100,6 +102,7 @@ export function ExamProvider({ children }) {
       AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
     }, 400);
     notifyExamChanged();
+    notifyMyDay(); // משימות הלימוד נשלחות גם ל-My Day (panmatz_daily)
   }, [state]);
 
   // סנכרון עם הענף (טלפון ↔ מחשב) — רק אם יש התחברות
@@ -144,6 +147,29 @@ export function ExamProvider({ children }) {
   const markTask = useCallback((taskId, day = keyOf()) => {
     if (!taskId) return;
     setState((s) => ({ ...s, daily: { ...s.daily, [day]: { ...(s.daily[day] || {}), done: { ...(s.daily[day]?.done || {}), [taskId]: true } } } }));
+  }, []);
+
+  // סימון / ביטול שהגיע מ-My Day
+  const setTaskDone = useCallback((taskId, day, done) => {
+    if (!taskId || !day) return;
+    setState((s) => {
+      if (!s) return s;
+      const cur = s.daily?.[day]?.done || {};
+      if (!!cur[taskId] === !!done) return s;
+      const next = { ...cur };
+      if (done) next[taskId] = true; else delete next[taskId];
+      return { ...s, daily: { ...s.daily, [day]: { ...(s.daily?.[day] || {}), done: next } } };
+    });
+  }, []);
+
+  // רישום בגשר — כדי שהסנכרון עם My Day יראה את עולם המבחן
+  useEffect(() => {
+    setExamApi({
+      getState: () => stateRef.current,
+      planFor: (day) => (stateRef.current ? planForDay(stateRef.current, day, { noCatch: day !== keyOf() }) : null),
+      setTaskDone,
+    });
+    return () => setExamApi(null);
   }, []);
 
   // סיום סשן שאלות: ניסיונות, מחברת טעויות, היסטוריה, משימה
