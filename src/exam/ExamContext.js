@@ -156,7 +156,7 @@ export function ExamProvider({ children }) {
       const next = { ...s, attempts, errors, errorsGone, sessions: [...s.sessions, session].slice(-80) };
       if (mode === 'diagnostic' && complete) {
         next.diagnosticDone = true;
-        next.startReadiness = Math.max(0.25, readiness(attempts));
+        next.startReadiness = readiness(attempts);
       }
       if (complete && taskId) {
         next.daily = { ...s.daily, [day]: { ...(s.daily[day] || {}), done: { ...(s.daily[day]?.done || {}), [taskId]: true } } };

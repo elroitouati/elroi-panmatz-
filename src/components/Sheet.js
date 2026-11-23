@@ -73,6 +73,12 @@ export default function Sheet({ visible, onClose, children, scroll, bg, grab, sc
     if (closingByGesture.current) { closingByGesture.current = false; onClose?.(); }
   };
 
+  // אם הגיליון נעלם יחד עם המסך שלו (למשל "יציאה" ואז חזרה אחורה) — מחזירים
+  // את העמוד שמאחור לגודל מלא. אחרת הוא נשאר מוקטן עם פינות מעוגלות.
+  useEffect(() => () => {
+    if (host && opened.current) host.value = withTiming(0, { duration: 200, ...keep });
+  }, []);
+
   useEffect(() => {
     if (visible) { setMounted(true); return; }
     if (!mounted) return;

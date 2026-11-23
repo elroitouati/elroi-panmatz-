@@ -33,6 +33,7 @@ import { ExamProvider } from './src/exam/ExamContext';
 import { GateProvider, navRef, useGate } from './src/exam/Gate';
 import ExamRoot from './src/exam/ExamRoot';
 import WebApp from './src/web/WebApp';
+import { PagerLtr, Rtl, rtlScreen } from './src/components/WebDir';
 
 // כיוון RTL מלא. נקרא לפני הרכיב הראשון; נכנס לתוקף מהרצה הבאה של האפליקציה.
 // (בדפדפן הכיוון נקבע ב-WebApp עם dir="rtl")
@@ -67,9 +68,10 @@ const navTheme = {
 function Tabs() {
   const gate = useGate();
   return (
+    <PagerLtr>
     <Tab.Navigator
       tabBarPosition="bottom"
-      tabBar={(props) => <TabBar {...props} />}
+      tabBar={(props) => <Rtl><TabBar {...props} /></Rtl>}
       screenOptions={{
         // החלקה בין המסכים: הדף עוקב אחרי האצבע 1:1, ומהירות ההעפה מחליטה
         // (pager נייטיב — פיזיקה של המערכת). ב-RTL המסך הבא נמצא משמאל.
@@ -84,16 +86,17 @@ function Tabs() {
       sceneContainerStyle={{ backgroundColor: colors.bg }}
       style={{ backgroundColor: colors.bg }}
     >
-      <Tab.Screen name="היום" component={HomeScreen} />
-      <Tab.Screen name="כושר" component={FitnessScreen} />
-      <Tab.Screen name="הלוח שלי" component={CalendarScreen} />
+      <Tab.Screen name="היום" component={rtlScreen(HomeScreen)} />
+      <Tab.Screen name="כושר" component={rtlScreen(FitnessScreen)} />
+      <Tab.Screen name="הלוח שלי" component={rtlScreen(CalendarScreen)} />
       {/* לחיצה על "מבחן" לא מחליפה טאב — היא פותחת את גיליון הכניסה לעולם המבחן */}
       <Tab.Screen
         name="מבחן"
-        component={PsychScreen}
+        component={rtlScreen(PsychScreen)}
         listeners={{ tabPress: (e) => { e.preventDefault(); gate.open(); } }}
       />
     </Tab.Navigator>
+    </PagerLtr>
   );
 }
 
@@ -149,8 +152,10 @@ export default function App() {
   // אם הפונט נכשל ממשיכים בכל זאת — פונט מערכת עדיף על מסך ריק.
   if (!fontsLoaded && !fontError) return null;
 
-  // גרסת המחשב: עולם המבחן בלבד
-  if (Platform.OS === 'web') {
+  // גרסת המחשב: עולם המבחן בלבד.
+  // (EXPO_PUBLIC_WEB_FULL=1 = כל האפליקציה בדפדפן — רק לבדיקות אוטומטיות)
+  const webFull = process.env.EXPO_PUBLIC_WEB_FULL === '1';
+  if (Platform.OS === 'web' && !webFull) {
     return (
       <GestureHandlerRootView style={styles.app} onLayout={onReady}>
         <WebApp />
@@ -159,7 +164,7 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.app} onLayout={onReady}>
+    <GestureHandlerRootView style={styles.app} onLayout={onReady} {...(webFull ? { dir: 'rtl' } : {})}>
       <SafeAreaProvider>
         <StatusBar style="light" />
         <AppProvider>

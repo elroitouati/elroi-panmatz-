@@ -52,7 +52,9 @@ export default function Results({ navigation, route }) {
             </View>
             <Text style={{ fontFamily: font.r, fontSize: 17, lineHeight: 25, color: ON_FLOW.dim, marginTop: 6, textAlign: dir.start }}>
               {unanswered ? `${unanswered} שאלות לא נענו. ` : ''}
-              {wrong.length ? `${wrong.length - unanswered > 0 ? wrong.length - unanswered : 0} טעויות נכנסו למחברת — כל אחת תחזור עד שתענה נכון פעמיים.` : 'בלי טעויות. כל הכבוד.'}
+              {s.mode === 'errors'
+                ? `${s.correct} תשובות נכונות — שאלה יוצאת מהמחברת אחרי שתי תשובות נכונות ברצף.`
+                : wrong.length ? `${wrong.length - unanswered > 0 ? wrong.length - unanswered : 0} טעויות נכנסו למחברת — כל אחת תחזור עד שתענה נכון פעמיים.` : 'בלי טעויות. כל הכבוד.'}
             </Text>
           </Flow>
         </Reveal>

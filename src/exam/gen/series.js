@@ -9,7 +9,7 @@ function build(r, sub) {
     case 'add': {
       const a = r.int(2, 60), d = r.pick([3, 4, 6, 7, 8, 9, 11, 12, 13, -3, -4, -6, -7, -9]);
       const s = Array.from({ length: 6 }, (_, i) => a + (d < 0 ? 80 : 0) + d * i);
-      return { seq: s, explain: `בכל צעד ${d > 0 ? 'מוסיפים' : 'מחסירים'} ${Math.abs(d)}.`, near: [s[5] + d, s[5] - d] };
+      return { seq: s, explain: `בכל צעד ${d > 0 ? 'מוסיפים' : 'מחסירים'} ${Math.abs(d)}.`, near: [s[5] + d, s[5] + 2 * d, s[5] + d + (d > 0 ? 1 : -1)] };
     }
     case 'mul': {
       const a = r.int(1, 5), m = r.pick([2, 3, 2, 3, 4]);
@@ -64,7 +64,8 @@ export function seriesQuestion(seed, sub) {
   const shown = seq.slice(0, -1);
   const correct = seq[seq.length - 1];
   const fallback = [correct + 1, correct - 1, correct + 2, correct - 2, correct + 10];
-  const { options, answer } = withDistractors(r, correct, [...near.filter((n) => Number.isFinite(n)), ...fallback], String);
+  // מסיח לא יכול להיות מספר שכבר מופיע בסדרה
+  const { options, answer } = withDistractors(r, correct, [...near, ...fallback].filter((n) => Number.isFinite(n) && !shown.includes(n)), String);
   return {
     topic: 'series', sub: s, seed, kind: 'series',
     prompt: 'איזה מספר ממשיך את הסדרה?',

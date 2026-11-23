@@ -99,6 +99,8 @@ export const PACE_LABEL = { ahead: 'לפני הקצב', on: 'בקצב', behind: 
 export function dailyMinutes(state, today) {
   const base = state.settings.dailyMinutes || 30;
   if (!state.attempts.length) return base;
+  // שבוע ראשון: עוד אין מספיק נתונים כדי לקבוע "מאחור" — לא מעלים זמן
+  if (dayDiff(state.createdAt, today) < 7) return base;
   const p = pace(state, today);
   if (p.status === 'behind') return Math.min(45, base + (p.gap < -0.1 ? 15 : 10));
   return base;
@@ -274,9 +276,11 @@ export function decisions(state, today) {
     const sub = [...weakest.subs].filter((s) => s.stats.n >= 2).sort((a, b) => a.stats.mastery - b.stats.mastery)[0];
     out.push({ icon: 'locate-outline', text: `יותר שאלות ב${weakest.name}${sub ? ` (בעיקר ${sub.name})` : ''} — דיוק ${Math.round(weakest.stats.recentAcc * 100)}% לאחרונה.` });
   }
+  const rush = [...table].sort((a, b) => b.stats.fastWrong - a.stats.fastWrong)[0];
+  if (rush && rush.stats.fastWrong >= 3) out.push({ icon: 'flash-outline', text: `${rush.stats.fastWrong} טעויות מהירות ב${rush.name}. עונים מהר מדי — קרא את כל ארבע התשובות לפני שבוחרים.` });
+  const flip = [...table].sort((a, b) => b.stats.flipWrong - a.stats.flipWrong)[0];
+  if (flip && flip.stats.flipWrong >= 2) out.push({ icon: 'swap-vertical', text: `ב${flip.name} שינית ${flip.stats.flipWrong} פעמים תשובה נכונה לשגויה. סמוך על הניתוח הראשון.` });
   for (const t of table) {
-    if (t.stats.fastWrong >= 3) out.push({ icon: 'flash-outline', text: `${t.stats.fastWrong} טעויות מהירות ב${t.name}. עונים מהר מדי — קרא את כל ארבע התשובות לפני שבוחרים.` });
-    if (t.stats.flipWrong >= 2) out.push({ icon: 'swap-vertical', text: `ב${t.name} שינית ${t.stats.flipWrong} פעמים תשובה נכונה לשגויה. סמוך על הניתוח הראשון.` });
     if (t.stats.mastered) out.push({ icon: 'ribbon-outline', text: `${t.name} — נשלט (85%+). עובר לחזרה מרווחת, פחות שאלות ביום.` });
     else if (t.stats.speedPhase && t.stats.slow) out.push({ icon: 'timer-outline', text: `${t.name}: הדיוק טוב, עכשיו מהירות. היעד ${Math.round(TIME_BUDGET[t.id])} שניות לשאלה, כרגע ${Math.round(t.stats.avgMs / 1000)}.` });
   }

@@ -3,6 +3,11 @@
 import { makeRng, withDistractors } from './rng';
 
 const PEOPLE = ['אבי', 'בתיה', 'גיל', 'דנה', 'הדר', 'ורד', 'זיו'];
+// דקדוק: פועל ותואר לפי מין
+const FEM = new Set(['בתיה', 'דנה', 'הדר', 'ורד']);
+const stands = (n) => (FEM.has(n) ? 'עומדת' : 'עומד');
+const first = (n) => (FEM.has(n) ? 'ראשונה' : 'ראשון');
+const last = (n) => (FEM.has(n) ? 'אחרונה' : 'אחרון');
 const SUBS = ['order', 'match', 'must'];
 
 function perms(arr) {
@@ -19,9 +24,9 @@ function orderQ(r) {
   const sol = r.shuffle(names);
   const pos = (arr, x) => arr.indexOf(x);
   const clueMakers = [
-    () => { const [a, b] = r.sample(names, 2); return pos(sol, a) < pos(sol, b) ? { t: `${a} עומד לפני ${b}.`, f: (p) => pos(p, a) < pos(p, b) } : { t: `${b} עומד לפני ${a}.`, f: (p) => pos(p, b) < pos(p, a) }; },
-    () => { const i = r.int(0, n - 2); const a = sol[i], b = sol[i + 1]; return { t: `${a} עומד מיד לפני ${b}.`, f: (p) => pos(p, b) - pos(p, a) === 1 }; },
-    () => { const a = r.pick(names); const i = pos(sol, a); return i === 0 ? { t: `${a} ראשון בשורה.`, f: (p) => pos(p, a) === 0 } : i === n - 1 ? { t: `${a} אחרון בשורה.`, f: (p) => pos(p, a) === n - 1 } : { t: `${a} לא ראשון ולא אחרון.`, f: (p) => pos(p, a) > 0 && pos(p, a) < n - 1 }; },
+    () => { const [a, b] = r.sample(names, 2); return pos(sol, a) < pos(sol, b) ? { t: `${a} ${stands(a)} לפני ${b}.`, f: (p) => pos(p, a) < pos(p, b) } : { t: `${b} ${stands(b)} לפני ${a}.`, f: (p) => pos(p, b) < pos(p, a) }; },
+    () => { const i = r.int(0, n - 2); const a = sol[i], b = sol[i + 1]; return { t: `${a} ${stands(a)} מיד לפני ${b}.`, f: (p) => pos(p, b) - pos(p, a) === 1 }; },
+    () => { const a = r.pick(names); const i = pos(sol, a); return i === 0 ? { t: `${a} ${first(a)} בשורה.`, f: (p) => pos(p, a) === 0 } : i === n - 1 ? { t: `${a} ${last(a)} בשורה.`, f: (p) => pos(p, a) === n - 1 } : { t: `${a} לא ${first(a)} ולא ${last(a)}.`, f: (p) => pos(p, a) > 0 && pos(p, a) < n - 1 }; },
     () => { const [a, b] = r.sample(names, 2); return Math.abs(pos(sol, a) - pos(sol, b)) > 1 ? { t: `${a} ו${b} לא עומדים זה ליד זה.`, f: (p) => Math.abs(pos(p, a) - pos(p, b)) > 1 } : { t: `${a} ו${b} עומדים זה ליד זה.`, f: (p) => Math.abs(pos(p, a) - pos(p, b)) === 1 }; },
   ];
   const all = perms(names);

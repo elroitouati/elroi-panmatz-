@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, useReducedMotion } from 'react-native-reanimated';
 import Press from '../components/Press';
+import { PagerLtr, Rtl, rtlScreen } from '../components/WebDir';
 import { haptic } from '../design/haptics';
 import { colors, ease, keep } from '../design/tokens';
 import { useX, font } from './ui';
@@ -79,18 +80,20 @@ function ExamTabBar({ state, navigation, position }) {
 function ExamTabs() {
   const { c } = useX();
   return (
+    <PagerLtr>
     <Tab.Navigator
       tabBarPosition="bottom"
-      tabBar={(p) => <ExamTabBar {...p} />}
+      tabBar={(p) => <Rtl><ExamTabBar {...p} /></Rtl>}
       screenOptions={{ swipeEnabled: true, animationEnabled: false, lazy: true, lazyPreloadDistance: 1, lazyPlaceholder: () => <View style={{ flex: 1, backgroundColor: c.paper }} /> }}
       sceneContainerStyle={{ backgroundColor: c.paper }}
       style={{ backgroundColor: c.paper }}
     >
-      <Tab.Screen name="היום" component={ExamToday} />
-      <Tab.Screen name="תרגול" component={ExamPractice} />
-      <Tab.Screen name="מילים" component={ExamWords} />
-      <Tab.Screen name="התקדמות" component={ExamProgress} />
+      <Tab.Screen name="היום" component={rtlScreen(ExamToday)} />
+      <Tab.Screen name="תרגול" component={rtlScreen(ExamPractice)} />
+      <Tab.Screen name="מילים" component={rtlScreen(ExamWords)} />
+      <Tab.Screen name="התקדמות" component={rtlScreen(ExamProgress)} />
     </Tab.Navigator>
+    </PagerLtr>
   );
 }
 

@@ -28,9 +28,12 @@ export default function ExamToday({ navigation }) {
   const { plan, done, off } = day;
   const next = plan.tasks.find((x) => !done[x.id]);
   const allDone = plan.tasks.length > 0 && !next;
-  const totalMin = plan.tasks.reduce((s, x) => s + (x.minutes || 0), 0);
-  const qCount = plan.tasks.filter((x) => x.kind === 'quiz' || x.kind === 'sim').reduce((s, x) => s + (x.count || 0), 0);
-  const wCount = plan.tasks.find((x) => x.kind === 'cards')?.count || 0;
+  // המונים בכרטיס — רק מה שעוד נשאר היום
+  const left = plan.tasks.filter((x) => !done[x.id]);
+  const totalMin = left.reduce((s, x) => s + (x.minutes || 0), 0);
+  const qCount = left.filter((x) => x.kind === 'quiz' || x.kind === 'sim').reduce((s, x) => s + (x.count || 0), 0);
+  const wCount = left.find((x) => x.kind === 'cards')?.count || 0;
+  const dayMin = plan.tasks.reduce((s, x) => s + (x.minutes || 0), 0);
   const daysLeft = dayDiff(today, state.settings.examDate);
   const ws = wordStats(WORDS, state.cards, today);
   const wd = weekdayOf(today);
@@ -57,7 +60,7 @@ export default function ExamToday({ navigation }) {
 
       <Reveal index={1}>
         <Flow variant="exam" style={{ padding: 22 }}>
-          <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim, textAlign: dir.start }}>{off ? 'יום חופש' : `${totalMin} דקות`}</Text>
+          <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim, textAlign: dir.start }}>{off ? 'מנוחה' : allDone ? `${dayMin} דקות היום` : left.length < plan.tasks.length ? `נשארו ${totalMin} דקות` : `${totalMin} דקות`}</Text>
           <Text style={{ fontFamily: font.h, fontSize: 30, lineHeight: 36, color: ON_FLOW.ink, marginTop: 4, textAlign: dir.start }}>{heroTitle}</Text>
           <Text style={{ fontFamily: font.r, fontSize: 17, lineHeight: 25, color: ON_FLOW.dim, marginTop: 6, textAlign: dir.start }}>{heroText}</Text>
           {!off && !allDone ? (
@@ -67,7 +70,7 @@ export default function ExamToday({ navigation }) {
               {wCount ? <Meta big={wCount} label="מילים" /> : null}
             </View>
           ) : null}
-          {!off && next ? <Btn variant="flow" label={done && Object.keys(done).length ? 'להמשיך' : 'התחל'} icon="play" onPress={() => startTask(navigation, next)} style={{ marginTop: 20 }} /> : null}
+          {!off && next ? <Btn variant="flow" label={plan.sim && state.activeSim ? 'להמשיך את הסימולציה' : left.length < plan.tasks.length ? 'להמשיך' : 'התחל'} icon="play" onPress={() => startTask(navigation, next, state)} style={{ marginTop: 20 }} /> : null}
           {off ? <Btn variant="flowLine" label="בכל זאת להתאמן היום" onPress={() => setOffToday(false)} style={{ marginTop: 20 }} /> : null}
         </Flow>
       </Reveal>
@@ -79,7 +82,7 @@ export default function ExamToday({ navigation }) {
             {plan.tasks.map((task, i) => {
               const isDone = !!done[task.id];
               return (
-                <Press key={task.id} onPress={() => startTask(navigation, task)} scaleTo={1} pressedStyle={{ backgroundColor: c.pressed }}
+                <Press key={task.id} onPress={() => startTask(navigation, task, state)} scaleTo={1} pressedStyle={{ backgroundColor: c.pressed }}
                   accessibilityLabel={`${task.title}, ${isDone ? 'הושלם' : 'לא הושלם'}`}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 18, borderTopWidth: i ? 1 : 0, borderColor: c.mist }}>
                   <CheckDot done={isDone} />
@@ -99,7 +102,7 @@ export default function ExamToday({ navigation }) {
       <Reveal index={3}>
         <View style={{ gap: 10, marginTop: 12 }}>
           <Tile icon="albums-outline" title="מילים לחזרה" sub={`${ws.mastered} נשלטות מתוך ${ws.total}`} big={ws.due} onPress={() => navigation.navigate('מילים')} />
-          <Tile icon="clipboard-outline" title="בדיקה שבועית" sub={toFriday === 0 ? 'היום' : toFriday === 1 ? 'מחר, ביום שישי' : `ביום שישי, בעוד ${toFriday} ימים`} big={toFriday === 0 ? null : toFriday} />
+          <Tile icon="clipboard-outline" title="בדיקה שבועית" sub={toFriday === 0 ? (plan.sim ? 'השבוע הסימולציה המלאה מחליפה אותה' : 'היום') : toFriday === 1 ? 'מחר, ביום שישי' : `ביום שישי, בעוד ${toFriday} ימים`} big={toFriday === 0 ? null : toFriday} />
           {!off ? (
             <Press onPress={() => setOffToday(true)} scaleTo={0.98} accessibilityLabel="לקחת את היום חופש" style={{ alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 16 }}>
               <Text style={[t.sub, { fontFamily: font.b, color: c.steel }]}>לקחת את היום חופש</Text>

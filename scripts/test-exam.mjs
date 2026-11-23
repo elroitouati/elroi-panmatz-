@@ -174,6 +174,48 @@ ok(mergeExam(M, R).attempts.length === 0 && mergeExam(R, M).attempts.length === 
 const E2 = mergeExam({ ...A, errors: { q1: { topic: 'logic', ts: 30 } } }, B);
 ok(!!E2.errors.q1, 'error made again after resolve comes back');
 
+// ---- דקדוק בשאלות היגיון ----
+let gram = 0;
+for (let sd = 1; sd < 400; sd++) {
+  const q = makeQuestion({ topic: 'logic', sub: 'order', seed: sd });
+  if (/(בתיה|דנה|הדר|ורד) (עומד |ראשון|אחרון)/.test(q.prompt) || /(אבי|גיל|זיו) (עומדת|ראשונה|אחרונה)/.test(q.prompt)) gram++;
+}
+ok(gram === 0, `logic grammar (${gram})`);
+
+// ---- סימולציה של 70 ימי שימוש ----
+const { makeRng } = await imp('gen/rng.js');
+const time = await imp('engine/time.js');
+{
+  const rng = makeRng(99);
+  let S = { ...base, attempts: [], diagnosticDone: false };
+  let day = '2026-11-23';
+  let bad = 0;
+  for (let k = 0; k < 70; k++) {
+    const plan = brain.planForDay(S, day);
+    const mins = plan.tasks.reduce((a, t) => a + (t.minutes || 0), 0);
+    if (!plan.off && (mins < 5 || mins > 200 || plan.tasks.some((t) => !t.title || !Number.isFinite(t.minutes)))) bad++;
+    let items = [];
+    for (const t of plan.tasks) {
+      if (t.kind !== 'quiz') continue;
+      items = t.mode === 'daily' ? brain.buildDaily(S, day, t.count) : t.mode === 'diagnostic' ? brain.buildDiagnostic() : t.mode === 'weekly' ? brain.buildWeekly(day) : brain.buildErrors(S, t.count);
+      const skill = Math.min(0.92, 0.3 + k * 0.01);
+      for (const it of items) {
+        const q = makeQuestion(it);
+        S.attempts.push({ t: Date.now() + k * 1000, d: day, topic: it.topic, sub: q.sub, seed: it.seed, ok: rng.next() < skill, ms: 20000 + rng.int(0, 60000), mode: t.mode });
+      }
+      if (t.mode === 'diagnostic') { S.diagnosticDone = true; S.startReadiness = brain.readiness(S.attempts); }
+    }
+    const r = brain.readiness(S.attempts);
+    const p = brain.pace(S, day);
+    const txt = brain.decisions(S, day).map((d) => d.text).join(' ');
+    if (!(r >= 0 && r <= 1) || !Number.isFinite(p.expected) || /NaN|undefined|Infinity/.test(txt + JSON.stringify(plan))) bad++;
+    day = time.addDays(day, 1);
+  }
+  ok(bad === 0, `70 ימי שימוש בלי ערכים שבורים (${bad})`);
+  ok(brain.readiness(S.attempts) > 0.5, `המוכנות עולה עם שיפור (${brain.readiness(S.attempts).toFixed(2)})`);
+}
+ok(brain.dailyMinutes({ ...base, attempts: [{ topic: 'vocab', ok: false, ms: 1, d: '2026-11-23' }], startReadiness: 0.6 }, '2026-11-25') === 30, 'שבוע ראשון בלי תוספת זמן');
+
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 fs.rmSync(tmp, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);
