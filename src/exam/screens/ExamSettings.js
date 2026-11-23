@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Switch } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Switch, Platform, ActivityIndicator } from 'react-native';
+import { supabase, supabaseConfigured } from '../../sync/supabase';
+import { getExamSyncStatus, onExamSyncStatus, syncExamNow } from '../examSync';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Press from '../../components/Press';
@@ -89,6 +91,8 @@ export default function ExamSettings({ navigation }) {
         <SectionTitle style={{ marginTop: 6 }}>מראה</SectionTitle>
         <Seg value={st.theme} options={[['light', 'בהיר'], ['dark', 'כהה'], ['system', 'כמו המכשיר']]} onChange={(v) => updateSettings({ theme: v })} />
 
+        <SyncBlock />
+
         <SectionTitle>המבחן</SectionTitle>
         <View style={{ backgroundColor: c.surface, borderRadius: 20, overflow: 'hidden' }}>
           <Row first title="תאריך המבחן" value={`${fmtDay(st.examDate)} · ${HEB_WEEKDAYS_FULL[weekdayOf(st.examDate)]}`} onPress={() => { setDraftDate(st.examDate); setDateOpen(true); }} />
@@ -102,7 +106,8 @@ export default function ExamSettings({ navigation }) {
         <Seg value={st.dailyMinutes} options={[[20, '20'], [30, '30'], [40, '40'], [45, '45']]} onChange={(v) => updateSettings({ dailyMinutes: v })} />
         <Text style={[t.sub, { marginTop: 8, marginHorizontal: 4 }]}>בדקות. אם תהיה מאחורי הקצב, המערכת תוסיף עד 15 דקות ותגיד לך למה.</Text>
 
-        <SectionTitle>תזכורות</SectionTitle>
+        {Platform.OS !== 'web' ? <SectionTitle>תזכורות</SectionTitle> : null}
+        {Platform.OS !== 'web' ? <>
         <View style={{ backgroundColor: c.surface, borderRadius: 20, overflow: 'hidden' }}>
           <Row first title="התראות">
             <Switch value={!!st.notify} onValueChange={(v) => updateSettings({ notify: v })} trackColor={{ true: c.deep, false: c.mist }} thumbColor="#fff" />
@@ -117,6 +122,7 @@ export default function ExamSettings({ navigation }) {
               onPress={() => setTimeEdit({ key: d, val: st.studyByDay[d] })} />
           ))}
         </View>
+        </> : null}
 
         <SectionTitle>נתונים</SectionTitle>
         <View style={{ backgroundColor: c.surface, borderRadius: 20, overflow: 'hidden' }}>
@@ -161,5 +167,40 @@ export default function ExamSettings({ navigation }) {
       <ExamSheet visible={resetOpen} onClose={() => setResetOpen(false)} title="לאפס את נתוני המבחן?" body="כל התשובות, המילים, הטעויות וההיסטוריה יימחקו. אי אפשר לבטל."
         primary="איפוס" destructive onPrimary={() => { resetExam(); setResetOpen(false); navigation.goBack(); }} />
     </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  חשבון וסנכרון טלפון ↔ מחשב
+// ---------------------------------------------------------------------------
+function SyncBlock() {
+  const { c, t } = useX();
+  const [st, setSt] = useState(getExamSyncStatus());
+  useEffect(() => onExamSyncStatus(setSt), []);
+  if (!supabaseConfigured) return null;
+  const web = Platform.OS === 'web';
+  const when = st.lastSync ? new Date(st.lastSync) : null;
+  const hm = when ? `${pad(when.getHours())}:${pad(when.getMinutes())}` : null;
+  let line;
+  if (!st.user) line = web ? 'לא מחובר' : 'כדי לסנכרן עם המחשב — התחבר בהגדרות של פנמ״צ (סנכרון עם My Day).';
+  else if (st.missingTable) line = 'חסרה טבלת exam_state ב-Supabase. צריך להריץ פעם אחת את הקובץ supabase/exam_state.sql.';
+  else if (st.error) line = 'אין חיבור כרגע — השינויים נשמרים ויישלחו כשיחזור החיבור.';
+  else line = hm ? `סונכרן לאחרונה ב־${hm}` : 'מתחבר…';
+  return (
+    <>
+      <SectionTitle>חשבון וסנכרון</SectionTitle>
+      <View style={{ backgroundColor: c.surface, borderRadius: 20, overflow: 'hidden' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
+          <Ionicons name={st.user && !st.error ? 'cloud-done-outline' : 'cloud-offline-outline'} size={24} color={st.user && !st.error ? c.ok : c.steel} />
+          <View style={{ flex: 1 }}>
+            <Text style={[t.body, { fontFamily: font.b }]}>{st.user ? st.user.email : 'טלפון ↔ מחשב'}</Text>
+            <Text style={t.sub}>{line}</Text>
+          </View>
+          {st.syncing ? <ActivityIndicator color={c.deep} /> : null}
+        </View>
+        {st.user ? <Row title="סנכרון עכשיו" onPress={() => syncExamNow()} /> : null}
+        {st.user && web ? <Row title="התנתקות" onPress={() => supabase.auth.signOut()} /> : null}
+      </View>
+    </>
   );
 }

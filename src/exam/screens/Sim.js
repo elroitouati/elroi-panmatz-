@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Flow from '../../components/Flow';
@@ -7,7 +7,7 @@ import Press from '../../components/Press';
 import { FocusBar } from '../components/Page';
 import QuestionView from '../components/QuestionView';
 import ExamSheet from '../components/ExamSheet';
-import { useX, Btn, Bar, ON_FLOW, font } from '../ui';
+import { useX, Btn, Bar, ON_FLOW, font, useContentWidth, useKeys } from '../ui';
 import { useExam } from '../ExamContext';
 import { SIM_SECTIONS, TOPIC } from '../topics';
 import { seedFrom } from '../gen/rng';
@@ -34,7 +34,7 @@ function freshSim() {
 
 export default function Sim({ navigation, route }) {
   const { c, t } = useX();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const insets = useSafeAreaInsets();
   const ex = useExam();
   const [sim, setSim] = useState(() => (route.params?.resume && ex.state.activeSim ? ex.state.activeSim : freshSim()));
@@ -140,6 +140,19 @@ export default function Sim({ navigation, route }) {
   useEffect(() => { runStart.current = Date.now(); qStart.current = Date.now(); }, []);
 
   const unanswered = sim.answers[sim.section].filter((x) => x.chosen == null).length;
+
+  // מקלדת: 1–4 בוחרים, Enter / חץ שמאלה = הבאה, חץ ימינה = הקודמת
+  useKeys((k) => {
+    if (exitOpen || endOpen) return false;
+    if (sim.phase === 'intro') { if (k === 'Enter') { begin(); return true; } return false; }
+    if (['1', '2', '3', '4'].includes(k)) { choose(Number(k) - 1); return true; }
+    if (k === 'Enter' || k === 'ArrowLeft') {
+      if (sim.qIdx === sec.count - 1) { if (unanswered) setEndOpen(true); else endSection(false); } else move(1);
+      return true;
+    }
+    if (k === 'ArrowRight') { move(-1); return true; }
+    return false;
+  });
   const warn = left < 5 * 60000;
 
   if (sim.phase === 'intro') {
@@ -185,7 +198,7 @@ export default function Sim({ navigation, route }) {
         )} />
       <View style={{ paddingHorizontal: 18, marginBottom: 6 }}><Bar value={(sim.qIdx + 1) / sec.count} height={5} /></View>
       <ScrollView ref={scroll} contentContainerStyle={{ padding: 18, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-        <QuestionView q={q} chosen={a.chosen} onChoose={choose} width={width - 36} />
+        <QuestionView q={q} chosen={a.chosen} onChoose={choose} width={width - 36} wide={width >= 720} />
       </ScrollView>
       <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingTop: 10, paddingBottom: insets.bottom + 14, borderTopWidth: 1, borderColor: c.mist }}>
         <Btn wrapStyle={{ flex: 1 }} variant="line" label="הקודמת" disabled={sim.qIdx === 0} onPress={() => move(-1)} />

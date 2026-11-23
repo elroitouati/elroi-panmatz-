@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Press from '../../components/Press';
 import { FocusBar } from '../components/Page';
-import { useX, Btn, Pill, font } from '../ui';
+import { useX, Btn, Pill, font, useContentWidth, useKeys, WEB } from '../ui';
 import { useExam } from '../ExamContext';
 import { WORD } from '../data/words';
 import { ease, keep } from '../../design/tokens';
@@ -29,7 +29,8 @@ const FLY = 700;
 
 export default function Cards({ navigation, route }) {
   const { c, t } = useX();
-  const { width, height } = useWindowDimensions();
+  const { height } = useWindowDimensions();
+  const width = useContentWidth();
   const insets = useSafeAreaInsets();
   const ex = useExam();
   const reduced = useReducedMotion();
@@ -152,6 +153,16 @@ export default function Cards({ navigation, route }) {
   const kStyle = useAnimatedStyle(() => ({ transform: [{ scale: bumpK.value }] }));
   const lStyle = useAnimatedStyle(() => ({ transform: [{ scale: bumpL.value }] }));
 
+  // מקלדת: רווח = היפוך, חץ ימינה = ידעתי, חץ שמאלה = לא ידעתי, Backspace = חזרה
+  useKeys((k) => {
+    if (ended) return false;
+    if (k === ' ') { doFlip(); return true; }
+    if (k === 'ArrowRight') { flyOut(true); return true; }
+    if (k === 'ArrowLeft') { flyOut(false); return true; }
+    if (k === 'Backspace') { undo(); return true; }
+    return false;
+  });
+
   const nextRound = () => {
     const again = learn.slice();
     setRound((r) => r + 1);
@@ -189,7 +200,7 @@ export default function Cards({ navigation, route }) {
                 ) : (
                   <Text style={{ fontFamily: font.h, fontSize: 44, lineHeight: 52, color: c.ink, textAlign: 'center' }}>{w.w}</Text>
                 )}
-                {!ex1 ? <Text style={{ position: 'absolute', bottom: 20, fontFamily: font.m, fontSize: 15, color: c.steel }}>{flipped ? 'הפירוש' : 'לחיצה להפוך'}</Text> : null}
+                {!ex1 ? <Text style={{ position: 'absolute', bottom: 20, fontFamily: font.m, fontSize: 15, color: c.steel }}>{flipped ? 'הפירוש' : WEB ? 'לחיצה או רווח להפוך · → ידעתי · ← לא ידעתי' : 'לחיצה להפוך'}</Text> : null}
 
                 <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 22, left: 22, transform: [{ rotate: '-8deg' }], borderWidth: 3, borderColor: c.ok, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4 }, knowStamp]}>
                   <Text style={{ fontFamily: font.h, fontSize: 20, color: c.ok }}>ידעתי</Text>

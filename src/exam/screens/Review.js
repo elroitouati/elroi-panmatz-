@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Press from '../../components/Press';
 import { Ionicons } from '@expo/vector-icons';
 import { FocusBar } from '../components/Page';
 import QuestionView, { Explain } from '../components/QuestionView';
-import { useX, Btn, Pill, font } from '../ui';
+import { useX, Btn, Pill, font, useContentWidth } from '../ui';
 import { useExam } from '../ExamContext';
 import { makeQuestion } from '../gen';
 import { REASONS } from '../engine/brain';
@@ -18,7 +18,7 @@ import { haptic } from '../../design/haptics';
 
 export default function Review({ navigation, route }) {
   const { c, t } = useX();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const insets = useSafeAreaInsets();
   const { state, setErrorReason } = useExam();
   const { sessionId, indices = [], at = 0, items: given } = route.params || {};
@@ -37,7 +37,7 @@ export default function Review({ navigation, route }) {
       <FocusBar onClose={() => navigation.goBack()} title={`טעות ${k + 1} מתוך ${list.length}`} closeIcon="arrow-forward"
         right={<Pill label="לימוד" icon="book-outline" onPress={() => navigation.navigate('Lesson', { topic: q.topic, peek: true })} />} />
       <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
-        <QuestionView q={q} chosen={it.chosen} onChoose={() => {}} reveal width={width - 36} />
+        <QuestionView q={q} chosen={it.chosen} onChoose={() => {}} reveal width={width - 36} wide={width >= 720} />
         {it.chosen == null ? <Text style={[t.sub, { marginTop: 10 }]}>לא נענתה.</Text> : null}
         <Explain q={q} ok={false} />
         {inNotebook ? (

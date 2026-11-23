@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Platform } from 'react-native';
+import { getExamSyncStatus, onExamSyncStatus } from '../examSync';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -12,9 +13,26 @@ import { haptic } from '../../design/haptics';
 //  כותרת גדולה, ותוכן נגלל. הנקודה הירוקה-זית בכפתור = "לשם חוזרים".
 // ============================================================================
 
+// בדפדפן: מצב החשבון והסנכרון (לחיצה → הגדרות)
+function AccountPill() {
+  const { c } = useX();
+  const nav = useNavigation();
+  const [st, setSt] = useState(getExamSyncStatus());
+  useEffect(() => onExamSyncStatus(setSt), []);
+  const okSync = st.user && !st.error;
+  return (
+    <Press onPress={() => nav.navigate('ExamSettings')} accessibilityLabel="חשבון וסנכרון" scaleTo={0.96}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: c.mist, backgroundColor: c.surface }}>
+      <Ionicons name={okSync ? 'cloud-done-outline' : 'cloud-offline-outline'} size={18} color={okSync ? c.ok : c.steel} />
+      <Text style={{ fontFamily: font.b, fontSize: 15, color: c.ink }}>{st.user ? (okSync ? 'מסונכרן עם הטלפון' : 'הסנכרון לא פעיל') : 'מקומי בלבד'}</Text>
+    </Press>
+  );
+}
+
 export function BackToPanmatz() {
   const { c } = useX();
   const nav = useNavigation();
+  if (Platform.OS === 'web') return <AccountPill />;
   return (
     <Press
       onPress={() => { haptic.light(); nav.navigate('Tabs'); }}

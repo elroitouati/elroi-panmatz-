@@ -1,10 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { keyOf, addDays } from './engine/time';
 import { review as srsReview, isDue } from './engine/srs';
 import { planForDay, readiness, trimAttempts, wordDeck } from './engine/brain';
 import { scheduleStudyReminders, scheduleEvening } from './notify';
+import { mergeExam } from './engine/merge';
+import { attachExamSync, notifyExamChanged } from './examSync';
+
+const NATIVE = Platform.OS !== 'web'; // בדפדפן אין התראות מקומיות
 
 // ============================================================================
 //  מצב עולם המבחן — נשמר בנפרד מפנמ"צ (מפתח משלו), כדי שאפשר יהיה לסנכרן
@@ -14,9 +18,13 @@ import { scheduleStudyReminders, scheduleEvening } from './notify';
 const KEY = 'elroi-panmatz-exam-v1';
 
 const STUDY_DEFAULT = { hour: 17, minute: 0 };
-export function defaultExamState(today = keyOf()) {
+export function defaultExamState(today = keyOf(), resetAt = 0) {
   return {
     v: 1,
+    resetAt,
+    settingsAt: 0,
+    simAt: 0,
+    errorsGone: {},
     createdAt: today,
     startReadiness: null,
     settings: {
@@ -66,7 +74,14 @@ export function ExamProvider({ children }) {
     saveTimer.current = setTimeout(() => {
       AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
     }, 400);
+    notifyExamChanged();
   }, [state]);
+
+  // סנכרון עם הענף (טלפון ↔ מחשב) — רק אם יש התחברות
+  useEffect(() => attachExamSync({
+    getState: () => stateRef.current,
+    merge: (remote) => setState((s) => (s ? mergeExam(s, remote) : s)),
+  }), []);
 
   // יום חדש כשחוזרים לאפליקציה
   useEffect(() => {
@@ -86,14 +101,14 @@ export function ExamProvider({ children }) {
 
   // תזכורות לימוד — כשההגדרות משתנות
   const settingsKey = state ? JSON.stringify([state.settings.notify, state.settings.studyByDay, state.settings.dailyMinutes]) : '';
-  useEffect(() => { if (state) scheduleStudyReminders(state.settings); }, [settingsKey]);
+  useEffect(() => { if (state && NATIVE) scheduleStudyReminders(state.settings); }, [settingsKey]);
 
   // תזכורת ערב — כשההתקדמות היומית משתנה
   const dayData = state?.daily?.[today];
   const remaining = dayData?.plan ? dayData.plan.tasks.filter((t) => !dayData.done?.[t.id]) : [];
   const eveningKey = state ? JSON.stringify([today, remaining.map((t) => t.id), state.settings.evening, state.settings.notify, state.settings.offDays.includes(today)]) : '';
   useEffect(() => {
-    if (!state || !dayData?.plan) return;
+    if (!state || !dayData?.plan || !NATIVE) return;
     scheduleEvening(state.settings, state.settings.offDays.includes(today) ? [] : remaining, today);
   }, [eveningKey]);
 
@@ -119,14 +134,15 @@ export function ExamProvider({ children }) {
         })),
       ]);
       const errors = { ...s.errors };
+      const errorsGone = { ...(s.errorsGone || {}) };
       for (const it of items) {
         if (it.chosen == null) continue;
         const qid = it.qid;
         if (!it.ok) {
-          errors[qid] = { topic: it.topic, sub: it.sub, seed: it.seed, ref: it.ref || null, chosen: it.chosen, at: day, reason: errors[qid]?.reason || null, streak: 0 };
+          errors[qid] = { topic: it.topic, sub: it.sub, seed: it.seed, ref: it.ref || null, chosen: it.chosen, at: day, reason: errors[qid]?.reason || null, streak: 0, ts: now };
         } else if (errors[qid]) {
           const streak = (errors[qid].streak || 0) + 1;
-          if (streak >= 2) delete errors[qid]; else errors[qid] = { ...errors[qid], streak, at: day };
+          if (streak >= 2) { delete errors[qid]; errorsGone[qid] = now; } else errors[qid] = { ...errors[qid], streak, at: day, ts: now };
         }
       }
       const answered = items.filter((it) => it.chosen != null);
@@ -137,7 +153,7 @@ export function ExamProvider({ children }) {
         sections: sections || null,
         readiness: readiness(attempts),
       };
-      const next = { ...s, attempts, errors, sessions: [...s.sessions, session].slice(-80) };
+      const next = { ...s, attempts, errors, errorsGone, sessions: [...s.sessions, session].slice(-80) };
       if (mode === 'diagnostic' && complete) {
         next.diagnosticDone = true;
         next.startReadiness = Math.max(0.25, readiness(attempts));
@@ -145,7 +161,7 @@ export function ExamProvider({ children }) {
       if (complete && taskId) {
         next.daily = { ...s.daily, [day]: { ...(s.daily[day] || {}), done: { ...(s.daily[day]?.done || {}), [taskId]: true } } };
       }
-      if (mode === 'sim') next.activeSim = null;
+      if (mode === 'sim') { next.activeSim = null; next.simAt = now; }
       return next;
     });
     return id;
@@ -178,11 +194,11 @@ export function ExamProvider({ children }) {
   }, []);
 
   const setErrorReason = useCallback((qid, reason) => {
-    setState((s) => (s.errors[qid] ? { ...s, errors: { ...s.errors, [qid]: { ...s.errors[qid], reason } } } : s));
+    setState((s) => (s.errors[qid] ? { ...s, errors: { ...s.errors, [qid]: { ...s.errors[qid], reason, ts: Date.now() } } } : s));
   }, []);
 
   const updateSettings = useCallback((patch) => {
-    setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
+    setState((s) => ({ ...s, settings: { ...s.settings, ...patch }, settingsAt: Date.now() }));
   }, []);
 
   const setOffToday = useCallback((off) => {
@@ -190,13 +206,13 @@ export function ExamProvider({ children }) {
     setState((s) => {
       const set = new Set(s.settings.offDays);
       if (off) set.add(day); else set.delete(day);
-      return { ...s, settings: { ...s.settings, offDays: [...set].sort() } };
+      return { ...s, settings: { ...s.settings, offDays: [...set].sort() }, settingsAt: Date.now() };
     });
   }, []);
 
-  const saveSim = useCallback((sim) => setState((s) => ({ ...s, activeSim: sim })), []);
+  const saveSim = useCallback((sim) => setState((s) => ({ ...s, activeSim: sim, simAt: Date.now() })), []);
 
-  const resetExam = useCallback(() => setState(defaultExamState()), []);
+  const resetExam = useCallback(() => setState(defaultExamState(keyOf(), Date.now())), []);
 
   const value = useMemo(() => ({
     state, today, markTask, recordSession, reviewWord, undoWord, setLesson, setErrorReason, updateSettings, setOffToday, saveSim, resetExam,

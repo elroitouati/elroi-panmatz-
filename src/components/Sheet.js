@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, View, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+
+// בדפדפן ה-Modal נפתח מחוץ לשורש — צריך להגדיר בו שוב כיוון RTL
+const WEB_DIR = Platform.OS === 'web' ? { dir: 'rtl' } : {};
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, interpolate, Extrapolation,
@@ -131,7 +134,7 @@ export default function Sheet({ visible, onClose, children, scroll, bg, grab, sc
 
   return (
     <Modal transparent visible statusBarTranslucent animationType="none" onRequestClose={onClose}>
-      <GestureHandlerRootView style={styles.fill}>
+      <GestureHandlerRootView style={styles.fill} {...WEB_DIR}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, scrim && { backgroundColor: scrim }, scrimStyle]}>
           <Pressable style={styles.fill} onPress={onClose} accessibilityLabel="סגירה" />
         </Animated.View>

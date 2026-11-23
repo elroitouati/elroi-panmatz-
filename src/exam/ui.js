@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
@@ -134,3 +134,41 @@ export function CheckDot({ done, onFlow }) {
 }
 
 export { ON_FLOW, font };
+
+// ---------------------------------------------------------------------------
+//  גרסת המחשב
+// ---------------------------------------------------------------------------
+export const WEB = Platform.OS === 'web';
+export const MAX_W = 820;
+
+// רוחב התוכן בפועל (בדפדפן העמוד מוגבל ל-820 ובמרכז)
+export function useContentWidth() {
+  const { width } = useWindowDimensions();
+  return Math.min(width, MAX_W);
+}
+
+// קיצורי מקלדת (רק בדפדפן). handler(key, event) — מחזיר true אם טופל.
+export function useKeys(handler) {
+  const ref = useRef(handler);
+  ref.current = handler;
+  useEffect(() => {
+    if (!WEB || typeof document === 'undefined') return undefined;
+    const onKey = (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (ref.current(e.key, e)) e.preventDefault();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+}
+
+export function Kbd({ k }) {
+  const { c } = useX();
+  if (!WEB) return null;
+  return (
+    <View style={{ borderWidth: 1, borderColor: c.mist, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 1 }}>
+      <Text style={{ fontFamily: font.m, fontSize: 13, color: c.steel }}>{k}</Text>
+    </View>
+  );
+}

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, I18nManager, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, useReducedMotion } from 'react-native-reanimated';
 import Press from '../../components/Press';
 import { FocusBar } from '../components/Page';
-import { useX, Btn, font } from '../ui';
+import { useX, Btn, font, useContentWidth, useKeys } from '../ui';
 import { useExam } from '../ExamContext';
 import { TOPIC } from '../topics';
 import { LESSONS } from '../data/lessons';
@@ -13,6 +13,7 @@ import { Sequence, FigureCell, Matrix, TechDiagram, ChartView } from '../compone
 import { figuresQuestion } from '../gen/figures';
 import { LETTERS } from '../components/QuestionView';
 import { ease, keep } from '../../design/tokens';
+import { IS_RTL } from '../../design/rtl';
 import { haptic } from '../../design/haptics';
 
 // ============================================================================
@@ -21,7 +22,7 @@ import { haptic } from '../../design/haptics';
 //  מחליף תרגול; בסופו "לתרגול".
 // ============================================================================
 
-const LTR_ROW = I18nManager.isRTL ? 'row-reverse' : 'row';
+const LTR_ROW = IS_RTL ? 'row-reverse' : 'row';
 
 function Diagram({ d, width }) {
   const { c, t } = useX();
@@ -94,7 +95,7 @@ function Diagram({ d, width }) {
 
 export default function Lesson({ navigation, route }) {
   const { c, t } = useX();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const insets = useSafeAreaInsets();
   const { state, today, setLesson, markTask } = useExam();
   const { topic, start = 0, taskId, peek } = route.params || {};
@@ -120,7 +121,7 @@ export default function Lesson({ navigation, route }) {
     if (n < 0 || n >= L.length) return;
     // קדימה: השקופית החדשה נכנסת מכיוון הקריאה (משמאל בעברית)
     const forward = n > i;
-    const sign = (I18nManager.isRTL ? -1 : 1) * (forward ? 1 : -1);
+    const sign = (IS_RTL ? -1 : 1) * (forward ? 1 : -1);
     x.value = reduced ? 0 : 28 * sign;
     o.value = 0;
     x.value = withTiming(0, { duration: 220, easing: ease.out });
@@ -130,6 +131,12 @@ export default function Lesson({ navigation, route }) {
     scroll.current?.scrollTo({ y: 0, animated: false });
   };
   const st = useAnimatedStyle(() => ({ opacity: o.value, transform: [{ translateX: x.value }] }));
+  // מקלדת: חץ שמאלה = הבא (כיוון הקריאה), חץ ימינה = הקודם
+  useKeys((k) => {
+    if (k === 'ArrowLeft') { go(i + 1); return true; }
+    if (k === 'ArrowRight') { go(i - 1); return true; }
+    return false;
+  });
 
   if (!slide) return <View style={{ flex: 1, backgroundColor: c.paper }} />;
   const last = i === L.length - 1;

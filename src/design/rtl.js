@@ -4,12 +4,16 @@
 //  נקודת ההחלטה היחידה לגבי כיוון — אין ערכי 'right'/'left' מפוזרים במסכים.
 // ============================================================================
 
-import { I18nManager } from 'react-native';
+import { I18nManager, Platform } from 'react-native';
 
 // יישור טקסט לוגי. RN לא תומך ב-textAlign: 'start', ולכן ממפים כאן פעם אחת.
 // כשה-RTL פעיל, אנדרואיד מחליף left↔right (doLeftAndRightSwapInRTL):
 // 'left' מתרנדר בצד ימין. בהרצה הראשונה, לפני שה-RTL נכנס לתוקף, אין החלפה.
 const swap = I18nManager.isRTL && I18nManager.doLeftAndRightSwapInRTL !== false;
+// בדפדפן (גרסת המחשב) הכיוון נקבע ב-dir="rtl" על השורש — RNW לא מכיר את
+// I18nManager, אבל מסדר שורות ו-start/end לפי ה-dir. לכן שם תמיד RTL.
+export const IS_RTL = Platform.OS === 'web' ? true : I18nManager.isRTL;
+
 export const dir = {
   start: swap ? 'left' : 'right',   // תחילת השורה בעברית — תמיד ימין על המסך
   end: swap ? 'right' : 'left',     // סופה — תמיד שמאל על המסך

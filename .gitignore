@@ -29,3 +29,4 @@ yarn-error.*
 # מפתחות Supabase — נשארים רק אצלך (ונשלחים ל-EAS דרך .easignore)
 .env
 .env.local
+dist-web/

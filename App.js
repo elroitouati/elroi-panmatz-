@@ -32,8 +32,10 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import { ExamProvider } from './src/exam/ExamContext';
 import { GateProvider, navRef, useGate } from './src/exam/Gate';
 import ExamRoot from './src/exam/ExamRoot';
+import WebApp from './src/web/WebApp';
 
 // כיוון RTL מלא. נקרא לפני הרכיב הראשון; נכנס לתוקף מהרצה הבאה של האפליקציה.
+// (בדפדפן הכיוון נקבע ב-WebApp עם dir="rtl")
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
 
@@ -146,6 +148,15 @@ export default function App() {
 
   // אם הפונט נכשל ממשיכים בכל זאת — פונט מערכת עדיף על מסך ריק.
   if (!fontsLoaded && !fontError) return null;
+
+  // גרסת המחשב: עולם המבחן בלבד
+  if (Platform.OS === 'web') {
+    return (
+      <GestureHandlerRootView style={styles.app} onLayout={onReady}>
+        <WebApp />
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={styles.app} onLayout={onReady}>

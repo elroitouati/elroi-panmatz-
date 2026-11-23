@@ -2,13 +2,14 @@ import React, { useRef } from 'react';
 import { View, Text, I18nManager } from 'react-native';
 import Svg, { Line, Circle, Rect, Polygon, G, Defs, ClipPath, Path, Text as SvgText } from 'react-native-svg';
 import { useX, font } from '../ui';
+import { IS_RTL } from '../../design/rtl';
 
 // ============================================================================
 //  ציורים: תאי צורות, מטריצה, תרשימים, גלגלים/מנוף/גלגלות, סדרת מספרים.
 //  הכול ב-SVG וקטורי — חד בכל גודל, צבע לפי המצב (בהיר/כהה).
 // ============================================================================
 
-const LTR_ROW = I18nManager.isRTL ? 'row-reverse' : 'row';
+const LTR_ROW = IS_RTL ? 'row-reverse' : 'row';
 let uid = 0;
 
 const ANG = (k) => (k * 45 * Math.PI) / 180; // 0 = למעלה, עם כיוון השעון

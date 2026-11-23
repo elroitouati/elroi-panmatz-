@@ -145,6 +145,35 @@ ok(brain.buildWeekly('2026-11-27').length === 32, 'weekly 32');
 const rushed = Array.from({ length: 12 }, () => ({ topic: 'logic', sub: 'order', ok: false, ms: 8000, d: '2026-11-24' }));
 ok(brain.statsFor(rushed, 'logic').fastWrong >= 3, 'detects rushing');
 
+// ---- מיזוג בין מכשירים ----
+const { mergeExam, fingerprint } = await imp('engine/merge.js');
+const A = { ...base, diagnosticDone: true, settingsAt: 5, settings: { ...base.settings, dailyMinutes: 40 },
+  attempts: [{ t: 1, topic: 'vocab', seed: 1, sid: 's1', ok: true }, { t: 3, topic: 'logic', seed: 2, sid: 's1', ok: false }],
+  sessions: [{ id: 's1', t: 3 }], cards: { w1: { box: 2, seen: 2, last: '2026-11-24' } },
+  errors: { q1: { topic: 'logic', ts: 10 } }, errorsGone: {}, lessons: { series: { done: true, step: 8, at: '2026-11-24' } },
+  daily: { '2026-11-24': { plan: { tasks: [] }, done: { words: true } } }, newToday: { d: '2026-11-24', n: 4 } };
+const B = { ...base, settingsAt: 9, settings: { ...base.settings, dailyMinutes: 30 },
+  attempts: [{ t: 2, topic: 'series', seed: 5, sid: 's2', ok: true }, { t: 1, topic: 'vocab', seed: 1, sid: 's1', ok: true }],
+  sessions: [{ id: 's2', t: 2 }], cards: { w1: { box: 3, seen: 3, last: '2026-11-25' }, w2: { box: 1, seen: 1, last: '2026-11-25' } },
+  errors: {}, errorsGone: { q1: 20 }, lessons: { series: { step: 3 }, figures: { step: 2 } },
+  daily: { '2026-11-24': { done: { practice: true } } }, newToday: { d: '2026-11-24', n: 7 } };
+const M = mergeExam(A, B);
+ok(M.attempts.length === 3 && M.attempts.map((x) => x.t).join() === '1,2,3', 'attempts union sorted, no dupes');
+ok(M.sessions.length === 2, 'sessions union');
+ok(M.cards.w1.box === 3 && M.cards.w2, 'newer card wins');
+ok(!M.errors.q1, 'error resolved on other device stays resolved');
+ok(M.settings.dailyMinutes === 30, 'latest settings win');
+ok(M.lessons.series.done && M.lessons.series.step === 8 && M.lessons.figures.step === 2, 'lessons merged');
+ok(M.daily['2026-11-24'].done.words && M.daily['2026-11-24'].done.practice && M.daily['2026-11-24'].plan, 'daily done merged');
+ok(M.newToday.n === 7 && M.diagnosticDone, 'newToday max, diagnostic OR');
+ok(fingerprint(mergeExam(A, B)) === fingerprint(mergeExam(B, A)), 'merge symmetric');
+ok(fingerprint(mergeExam(M, M)) === fingerprint(M), 'merge idempotent');
+ok(fingerprint(mergeExam(M, A)) === fingerprint(M), 'merge absorbs older copy');
+const R = { ...base, resetAt: 100, attempts: [] };
+ok(mergeExam(M, R).attempts.length === 0 && mergeExam(R, M).attempts.length === 0, 'reset wins over older data');
+const E2 = mergeExam({ ...A, errors: { q1: { topic: 'logic', ts: 30 } } }, B);
+ok(!!E2.errors.q1, 'error made again after resolve comes back');
+
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 fs.rmSync(tmp, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FocusBar } from '../components/Page';
 import QuestionView, { Explain } from '../components/QuestionView';
 import ExamSheet from '../components/ExamSheet';
-import { useX, Btn, Pill, Bar, font } from '../ui';
+import { useX, Btn, Pill, Bar, font, useContentWidth, useKeys, WEB } from '../ui';
 import { useExam } from '../ExamContext';
 import { makeQuestion } from '../gen';
 import { buildDaily, buildTopic, buildDiagnostic, buildWeekly, buildErrors } from '../engine/brain';
@@ -32,7 +32,8 @@ export function fmtClock(ms) {
 
 export default function Quiz({ navigation, route }) {
   const { c, t } = useX();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
+  const wide = width >= 720;
   const insets = useSafeAreaInsets();
   const ex = useExam();
   const { mode = 'daily', taskId, count, topic, sub } = route.params || {};
@@ -143,6 +144,14 @@ export default function Quiz({ navigation, route }) {
     navigation.goBack();
   };
 
+  // מקלדת (מחשב): 1–4 בוחרים, Enter = בדיקה / הבא
+  useKeys((k) => {
+    if (exitOpen || !items.length) return false;
+    if (['1', '2', '3', '4'].includes(k) && !(feedback && checked)) { choose(Number(k) - 1); return true; }
+    if (k === 'Enter') { next(); return true; }
+    return false;
+  });
+
   const warn = left != null && left < 5 * 60000;
   const nextLabel = feedback && !checked ? 'בדיקה' : idx === items.length - 1 ? 'סיום' : 'הבא';
 
@@ -162,11 +171,11 @@ export default function Quiz({ navigation, route }) {
       />
       <View style={{ paddingHorizontal: 18, marginBottom: 6 }}><Bar value={(idx + (checked || !feedback ? 1 : 0)) / items.length} height={5} /></View>
       <ScrollView ref={scroll} contentContainerStyle={{ padding: 18, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-        <QuestionView q={cur.q} chosen={a.chosen} onChoose={choose} reveal={feedback && checked} width={width - 36} />
+        <QuestionView q={cur.q} chosen={a.chosen} onChoose={choose} reveal={feedback && checked} width={width - 36} wide={wide} />
         {feedback && checked ? <Explain q={cur.q} ok={a.chosen === cur.q.answer} /> : null}
       </ScrollView>
       <View style={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: insets.bottom + 14, borderTopWidth: 1, borderColor: c.mist, backgroundColor: c.paper }}>
-        <Btn label={nextLabel} onPress={next} disabled={a.chosen == null} />
+        <Btn label={WEB ? `${nextLabel}  ·  Enter` : nextLabel} onPress={next} disabled={a.chosen == null} />
       </View>
       <ExamSheet
         visible={exitOpen}
