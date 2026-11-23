@@ -242,6 +242,16 @@ ok(!brain.planForDay({ ...base, settings: { ...base.settings, startDate: '2026-1
   ok(pw.tasks[0].id === 'weekly' && pw.tasks[0].makeup === '2026-11-27', 'בדיקה שבועית שפוספסה עוברת ליום הבא');
   const S3 = { ...S1, sessions: [...S1.sessions, { id: 'w', mode: 'weekly', complete: true, d: '2026-11-27', t: 2 }] };
   ok(brain.planForDay(S3, '2026-11-28').tasks[0].id !== 'weekly', 'בדיקה שנעשתה לא חוזרת');
+  // הבדיקה שעברה לשבת תפסה את התרגול — הדקות נכנסות לחוב מיום ראשון
+  const pw2 = brain.planForDay(S1, '2026-11-28');
+  ok(pw2.tasks[0].displaced >= 10, `דקות התרגול שנדחקו נרשמות (${pw2.tasks[0].displaced})`);
+  const S6 = { ...S1, daily: { ...S1.daily, '2026-11-28': { plan: pw2, done: { weekly: true } } },
+    sessions: [...S1.sessions, { id: 'w1', mode: 'weekly', complete: true, d: '2026-11-28', t: 3 }] };
+  const c6 = brain.catchUp(S6, '2026-11-29');
+  ok(c6.debt === 18 + pw2.tasks[0].displaced, `החוב כולל את התרגול שנדחק (${c6.debt})`);
+  ok(!c6.weeklyDue, 'הבדיקה לא חוזרת אחרי שנעשתה');
+  const p29 = brain.planForDay(S6, '2026-11-29').tasks.find((t) => t.id === 'practice');
+  ok(p29 && p29.extra > 0, `ביום ראשון יש השלמה (${p29 && p29.extra})`);
   // סימולציה שפוספסה ב-18.12 (שישי) → שבת 19.12
   const S4 = { ...S0, daily: {} };
   ok(brain.planForDay(S4, '2026-12-19').tasks[0].makeup === '2026-12-18', 'סימולציה שפוספסה עוברת לשבת');

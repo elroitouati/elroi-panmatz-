@@ -235,6 +235,8 @@ export function catchUp(state, day) {
       const pr = plan.tasks.find((t) => t.id === 'practice');
       if (pr && !done.practice) { missed += pr.minutes - (pr.extra || 0); out.missedDays++; }
       if (pr && done.practice) paid += pr.extra || 0;
+      // השלמה (בדיקה/סימולציה) שתפסה את מקום התרגול — דקות התרגול עוברות לחוב
+      for (const t of plan.tasks) if (t.displaced) missed += t.displaced;
     } else {
       // יום שהאפליקציה לא נפתחה בו
       const est = planForDay(state, d, { noCatch: true });
@@ -281,15 +283,17 @@ export function planForDay(state, day, opts = {}) {
     return { minutes: 180, tasks, sim: true };
   }
   const cu = opts.noCatch ? { debt: 0 } : catchUp(state, day);
+  // דקות התרגול שהיו ביום הזה — אם השלמה תופסת את מקומן, הן נכנסות לחוב
+  const displacedPractice = Math.max(10, minutes - 12);
   if (cu.simDue) {
-    tasks.push({ id: 'sim', kind: 'sim', title: 'סימולציה מלאה (השלמה)', sub: `במקום ${fmtDay(cu.simDue)} · 180 שאלות`, minutes: 180, count: 180, makeup: cu.simDue });
+    tasks.push({ id: 'sim', kind: 'sim', title: 'סימולציה מלאה (השלמה)', sub: `במקום ${fmtDay(cu.simDue)} · 180 שאלות`, minutes: 180, count: 180, makeup: cu.simDue, displaced: displacedPractice });
     return { minutes: 180, tasks, sim: true, makeup: true };
   }
   const deck = wordDeck(state, day);
   const wordsMin = deck.length ? Math.max(3, Math.round(deck.length * 0.35)) : 0;
   if (wd === 5 || cu.weeklyDue) {
     const makeup = wd !== 5;
-    tasks.push({ id: 'weekly', kind: 'quiz', mode: 'weekly', title: makeup ? 'בדיקה שבועית (השלמה)' : 'בדיקה שבועית', sub: makeup ? `מיום שישי · 32 שאלות · 30 דק׳` : '32 שאלות · 30 דק׳ בזמן אמת', minutes: 30, count: 32, ...(makeup ? { makeup: cu.weeklyDue } : {}) });
+    tasks.push({ id: 'weekly', kind: 'quiz', mode: 'weekly', title: makeup ? 'בדיקה שבועית (השלמה)' : 'בדיקה שבועית', sub: makeup ? `מיום שישי · 32 שאלות · 30 דק׳` : '32 שאלות · 30 דק׳ בזמן אמת', minutes: 30, count: 32, ...(makeup ? { makeup: cu.weeklyDue, displaced: displacedPractice } : {}) });
     if (deck.length) tasks.push({ id: 'words', kind: 'cards', title: 'כרטיסיות מילים', sub: `${deck.length} מילים`, minutes: wordsMin, count: deck.length });
     return { minutes: 30 + wordsMin, tasks, weekly: true };
   }
@@ -346,7 +350,7 @@ export function decisions(state, today) {
   const mins = dailyMinutes(state, today);
   const cu = catchUp(state, today);
   if (cu.simDue) out.push({ icon: 'calendar-outline', text: `הסימולציה של ${fmtDay(cu.simDue)} פוספסה — היא נכנסה לתוכנית של היום.` });
-  if (cu.weeklyDue) out.push({ icon: 'clipboard-outline', text: `הבדיקה השבועית של ${fmtDay(cu.weeklyDue)} פוספסה — היא עברה להיום, במקום התרגול הרגיל.` });
+  if (cu.weeklyDue) out.push({ icon: 'clipboard-outline', text: `הבדיקה השבועית של ${fmtDay(cu.weeklyDue)} פוספסה — היא עברה להיום. התרגול של היום לא הולך לאיבוד: הוא מתפזר על הימים הבאים.` });
   if (cu.debt > 0) out.push({ icon: 'refresh-circle-outline', text: `${cu.debt} דקות תרגול שפוספסו בימים האחרונים — מתפזרות על הימים הבאים, עד ${MAX_EXTRA} דקות ביום.` });
   if (p.status === 'behind') out.push({ icon: 'trending-up', text: `הזמן היומי עלה ל־${mins} דקות — המוכנות ${Math.round(p.now * 100)}% והקצב דורש ${Math.round(p.expected * 100)}%.` });
   else if (p.status === 'ahead') out.push({ icon: 'checkmark-circle-outline', text: `אתה לפני הקצב (${Math.round(p.now * 100)}% מול ${Math.round(p.expected * 100)}%). שומרים על ${mins} דקות ביום.` });
