@@ -1,0 +1,138 @@
+// בדיקות לעולם המבחן: מחוללים, מנוע חזרות ומוח. מריץ: node scripts/test-exam.mjs
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { pathToFileURL } from 'node:url';
+
+const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'exam-'));
+function copy(dir, rel = '') {
+  for (const f of fs.readdirSync(path.join(dir, rel))) {
+    const p = path.join(rel, f);
+    const full = path.join(dir, p);
+    if (fs.statSync(full).isDirectory()) { fs.mkdirSync(path.join(tmp, p), { recursive: true }); copy(dir, p); continue; }
+    if (!f.endsWith('.js')) continue;
+    // רק קבצי לוגיקה (בלי React)
+    const src = fs.readFileSync(full, 'utf8');
+    if (/from 'react|from 'react-native|from 'expo/.test(src)) continue;
+    fs.writeFileSync(path.join(tmp, p), src.replace(/from '(\.{1,2}\/[^']+?)(\.js)?'/g, "from '$1.js'"));
+  }
+}
+copy(path.join(root, 'src/exam'));
+const imp = (p) => import(pathToFileURL(path.join(tmp, p)).href);
+
+let pass = 0, fail = 0;
+const ok = (cond, msg) => { if (cond) pass++; else { fail++; console.log('✗', msg); } };
+
+const { makeQuestion } = await imp('gen/index.js');
+const { TOPICS } = await imp('topics.js');
+const { WORDS } = await imp('data/words.js');
+const { ANALOGIES } = await imp('data/analogies.js');
+const { LESSONS } = await imp('data/lessons.js');
+
+// ---- כל מחולל, כל תת־נושא, 400 זרעים ----
+for (const t of TOPICS) {
+  for (const [sub] of [...t.subs, [null]]) {
+    let bad = 0, sample;
+    for (let s = 1; s <= 400; s++) {
+      const q = makeQuestion({ topic: t.id, sub, seed: s * 7919 });
+      const opts = q.options.map((o) => JSON.stringify(o));
+      const valid = q.options.length === 4 && new Set(opts).size === 4 && q.answer >= 0 && q.answer < 4 && q.prompt && q.explain
+        && !opts.some((o) => o.includes('NaN') || o.includes('undefined') || o.includes('Infinity'));
+      if (!valid) { bad++; sample = sample || q; }
+      if (t.id === 'series') {
+        const all = [...q.seq, Number(q.options[q.answer])];
+        if (all.some((n) => !Number.isFinite(Number(n)))) { bad++; sample = q; }
+      }
+    }
+    ok(bad === 0, `${t.id}/${sub}: ${bad} שאלות פגומות ${sample ? JSON.stringify(sample).slice(0, 300) : ''}`);
+  }
+}
+// דטרמיניזם: אותו זרע = אותה שאלה
+ok(JSON.stringify(makeQuestion({ topic: 'logic', sub: 'order', seed: 42 })) === JSON.stringify(makeQuestion({ topic: 'logic', sub: 'order', seed: 42 })), 'same seed same question');
+ok(makeQuestion({ topic: 'vocab', sub: null, seed: 5, ref: WORDS[10].id }).wordId === WORDS[10].id, 'vocab ref respected');
+
+// סדרות: התשובה באמת ממשיכה את החוק (בדיקה ידנית לתת־נושא add)
+for (let s = 1; s < 200; s++) {
+  const q = makeQuestion({ topic: 'series', sub: 'add', seed: s });
+  const d = q.seq[1] - q.seq[0];
+  ok(Number(q.options[q.answer]) === q.seq[q.seq.length - 1] + d, `series add ${s}`);
+}
+// צורות: חיבור = איחוד
+for (let s = 1; s < 200; s++) {
+  const q = makeQuestion({ topic: 'figures', sub: 'union', seed: s });
+  const a = q.matrix[6].s, b = q.matrix[7].s, c = q.options[q.answer].s;
+  ok(JSON.stringify([...new Set([...a, ...b])].sort((x, y) => x - y)) === JSON.stringify(c), `figures union ${s}`);
+}
+
+// ---- תוכן ----
+ok(WORDS.length >= 480, `מאגר מילים: ${WORDS.length}`);
+ok(WORDS.every((w) => w.m && w.s && w.m.split(' ').length <= 6), 'כל מילה עם פירוש קצר ומשפט');
+ok(new Set(WORDS.map((w) => w.id)).size === WORDS.length, 'מזהי מילים ייחודיים');
+ok(ANALOGIES.length >= 60 && ANALOGIES.every((a) => a.wrong.length === 3 && a.pair.includes(':') && a.correct.includes(':')), `אנלוגיות: ${ANALOGIES.length}`);
+for (const t of TOPICS) {
+  const L = LESSONS[t.id];
+  ok(L && L.length >= 5, `שיעור ל-${t.id}`);
+  const check = L.find((s) => s.check);
+  ok(check && check.check.options.length === 4, `בדיקה בשיעור ${t.id}`);
+}
+
+// ---- חזרה מרווחת ----
+const srs = await imp('engine/srs.js');
+let c = srs.review(null, true, '2026-11-23');
+ok(c.box === 1 && c.due === '2026-11-24', 'srs first know');
+c = srs.review(c, true, '2026-11-24');
+ok(c.box === 2 && c.due === '2026-11-26', 'srs box2');
+c = srs.review(c, false, '2026-11-26');
+ok(c.box === 1 && c.lapses === 1 && c.due === '2026-11-27', 'srs lapse');
+const deck = srs.todaysDeck(WORDS, {}, '2026-11-23');
+ok(deck.length === 10, 'new words per day = 10');
+const deck2 = srs.todaysDeck(WORDS, {}, '2026-11-23', { newIntroducedToday: 10 });
+ok(deck2.length === 0, 'no more new words after 10');
+
+// ---- המוח ----
+const brain = await imp('engine/brain.js');
+const base = {
+  createdAt: '2026-11-23', attempts: [], cards: {}, lessons: {}, errors: {}, daily: {}, diagnosticDone: false,
+  settings: { examDate: '2027-01-28', dailyMinutes: 30, simDates: ['2026-12-18', '2027-01-08', '2027-01-22'], offDays: [] },
+};
+let plan = brain.planForDay(base, '2026-11-23');
+ok(plan.tasks[0].id === 'diagnostic', 'first day = diagnostic');
+const st = { ...base, diagnosticDone: true };
+plan = brain.planForDay(st, '2026-11-24');
+ok(plan.tasks.some((t) => t.id === 'practice') && plan.tasks.some((t) => t.id === 'words'), 'regular day has practice + words');
+ok(plan.tasks.reduce((s, t) => s + t.minutes, 0) <= 36, `regular day ≈30 min (${plan.tasks.reduce((s, t) => s + t.minutes, 0)})`);
+ok(brain.planForDay(st, '2026-11-27').tasks[0].id === 'weekly', 'friday = weekly check');
+ok(brain.planForDay(st, '2026-12-18').tasks[0].id === 'sim', 'sim day');
+ok(brain.planForDay({ ...st, settings: { ...st.settings, offDays: ['2026-11-25'] } }, '2026-11-25').off, 'off day');
+const daily = brain.buildDaily(st, '2026-11-24', 18);
+ok(daily.length === 18, `daily count ${daily.length}`);
+let adj = 0; for (let i = 1; i < daily.length; i++) if (daily[i].topic === daily[i - 1].topic) adj++;
+ok(adj <= 2, `interleaving (${adj} רצופים)`);
+ok(new Set(daily.map((d) => d.topic)).size >= 4, 'daily mixes ≥4 topics');
+// חולשה מקבלת יותר שאלות
+const weakAttempts = [];
+for (let i = 0; i < 30; i++) {
+  weakAttempts.push({ topic: 'figures', sub: 'xor', ok: i % 4 === 0, ms: 50000, d: '2026-11-24' });
+  weakAttempts.push({ topic: 'vocab', sub: 'tierA', ok: true, ms: 15000, d: '2026-11-24' });
+}
+const st2 = { ...st, attempts: weakAttempts };
+const d2 = brain.buildDaily(st2, '2026-11-25', 18);
+ok(d2.filter((x) => x.topic === 'figures').length > d2.filter((x) => x.topic === 'vocab').length, 'weak topic gets more questions');
+ok(brain.statsFor(weakAttempts, 'vocab').mastery > 0.8, 'mastery high for all-correct');
+ok(brain.statsFor(weakAttempts, 'figures').mastery < 0.4, 'mastery low for weak');
+const r = brain.readiness(weakAttempts);
+ok(r > 0 && r < 1, `readiness ${r.toFixed(2)}`);
+const p = brain.pace(st2, '2026-12-20');
+ok(['ahead', 'on', 'behind'].includes(p.status) && p.daysLeft === 39, `pace ${p.status} ${p.daysLeft}`);
+const dec = brain.decisions(st2, '2026-11-25');
+ok(dec.length >= 2 && dec.some((d) => d.text.includes('צורות')), 'decisions mention weak topic');
+ok(brain.buildDiagnostic().length === 24, 'diagnostic 24');
+ok(brain.buildWeekly('2026-11-27').length === 32, 'weekly 32');
+// פזיזות
+const rushed = Array.from({ length: 12 }, () => ({ topic: 'logic', sub: 'order', ok: false, ms: 8000, d: '2026-11-24' }));
+ok(brain.statsFor(rushed, 'logic').fastWrong >= 3, 'detects rushing');
+
+console.log(`\n${pass} עברו, ${fail} נכשלו`);
+fs.rmSync(tmp, { recursive: true, force: true });
+process.exit(fail ? 1 : 0);
