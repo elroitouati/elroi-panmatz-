@@ -11,7 +11,7 @@ import { startTask, TASK_ICON } from '../actions';
 import { dayDiff, weekdayOf } from '../engine/time';
 import { wordStats } from '../engine/srs';
 import { WORDS } from '../data/words';
-import { fmtDay } from '../engine/brain';
+import { fmtDay, startOf } from '../engine/brain';
 import { HEB_WEEKDAYS_FULL } from '../../utils/date';
 import { dir } from '../../design/rtl';
 
@@ -39,8 +39,10 @@ export default function ExamToday({ navigation }) {
   const wd = weekdayOf(today);
   const toFriday = (5 - wd + 7) % 7;
 
-  const heroTitle = off ? 'היום חופש' : allDone ? 'סיימת את היום' : plan.sim ? 'יום סימולציה' : plan.weekly ? 'בדיקה שבועית' : !state.diagnosticDone ? 'נתחיל באבחון' : 'האימון של היום';
-  const heroText = off ? 'מנוחה היא חלק מהתוכנית. מחר ממשיכים.'
+  const notStarted = !!plan.notStarted;
+  const startIn = notStarted ? dayDiff(today, startOf(state)) : 0;
+  const heroTitle = notStarted ? (startIn === 1 ? 'מתחילים מחר' : `מתחילים ב־${fmtDay(startOf(state))}`) : off ? 'היום חופש' : allDone ? 'סיימת את היום' : plan.sim ? 'יום סימולציה' : plan.weekly ? 'בדיקה שבועית' : !state.diagnosticDone ? 'נתחיל באבחון' : 'האימון של היום';
+  const heroText = notStarted ? 'התוכנית היומית מתחילה אז, באבחון פתיחה קצר. עד אז אפשר להציץ בשיעורים ולתרגל חופשי — זה לא חובה.' : off ? 'מנוחה היא חלק מהתוכנית. מחר ממשיכים.'
     : allDone ? 'כל המשימות הושלמו. המערכת כבר עדכנה את התוכנית למחר.'
     : plan.sim ? '180 שאלות בשמונה פרקים מתוזמנים — בדיוק כמו ביום המבחן.'
     : plan.weekly ? '30 דקות בזמן אמת, מכל הנושאים. התוצאה קובעת את השבוע הבא.'
@@ -60,10 +62,10 @@ export default function ExamToday({ navigation }) {
 
       <Reveal index={1}>
         <Flow variant="exam" style={{ padding: 22 }}>
-          <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim, textAlign: dir.start }}>{off ? 'מנוחה' : allDone ? `${dayMin} דקות היום` : left.length < plan.tasks.length ? `נשארו ${totalMin} דקות` : `${totalMin} דקות`}</Text>
+          <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim, textAlign: dir.start }}>{notStarted ? `התוכנית · ${fmtDay(startOf(state))}` : off ? 'מנוחה' : allDone ? `${dayMin} דקות היום` : left.length < plan.tasks.length ? `נשארו ${totalMin} דקות` : `${totalMin} דקות`}</Text>
           <Text style={{ fontFamily: font.h, fontSize: 30, lineHeight: 36, color: ON_FLOW.ink, marginTop: 4, textAlign: dir.start }}>{heroTitle}</Text>
           <Text style={{ fontFamily: font.r, fontSize: 17, lineHeight: 25, color: ON_FLOW.dim, marginTop: 6, textAlign: dir.start }}>{heroText}</Text>
-          {!off && !allDone ? (
+          {!off && !allDone && !notStarted ? (
             <View style={{ flexDirection: 'row', gap: 22, marginTop: 16 }}>
               <Meta big={totalMin} label="דקות" />
               {qCount ? <Meta big={qCount} label="שאלות" /> : null}
@@ -72,10 +74,11 @@ export default function ExamToday({ navigation }) {
           ) : null}
           {!off && next ? <Btn variant="flow" label={plan.sim && state.activeSim ? 'להמשיך את הסימולציה' : left.length < plan.tasks.length ? 'להמשיך' : 'התחל'} icon="play" onPress={() => startTask(navigation, next, state)} style={{ marginTop: 20 }} /> : null}
           {off ? <Btn variant="flowLine" label="בכל זאת להתאמן היום" onPress={() => setOffToday(false)} style={{ marginTop: 20 }} /> : null}
+          {notStarted ? <Btn variant="flowLine" label="להציץ בתרגול" icon="grid-outline" onPress={() => navigation.navigate('תרגול')} style={{ marginTop: 20 }} /> : null}
         </Flow>
       </Reveal>
 
-      {!off && plan.tasks.length ? (
+      {!off && !notStarted && plan.tasks.length ? (
         <Reveal index={2}>
           <SectionTitle>המשימות של היום</SectionTitle>
           <View style={{ backgroundColor: c.surface, borderRadius: 22, overflow: 'hidden' }}>
@@ -103,7 +106,7 @@ export default function ExamToday({ navigation }) {
         <View style={{ gap: 10, marginTop: 12 }}>
           <Tile icon="albums-outline" title="מילים לחזרה" sub={`${ws.mastered} נשלטות מתוך ${ws.total}`} big={ws.due} onPress={() => navigation.navigate('מילים')} />
           <Tile icon="clipboard-outline" title="בדיקה שבועית" sub={toFriday === 0 ? (plan.sim ? 'השבוע הסימולציה המלאה מחליפה אותה' : 'היום') : toFriday === 1 ? 'מחר, ביום שישי' : `ביום שישי, בעוד ${toFriday} ימים`} big={toFriday === 0 ? null : toFriday} />
-          {!off ? (
+          {!off && !notStarted ? (
             <Press onPress={() => setOffToday(true)} scaleTo={0.98} accessibilityLabel="לקחת את היום חופש" style={{ alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 16 }}>
               <Text style={[t.sub, { fontFamily: font.b, color: c.steel }]}>לקחת את היום חופש</Text>
             </Press>

@@ -83,7 +83,7 @@ export function readiness(attempts) {
 export function pace(state, today) {
   const exam = state.settings.examDate;
   const start = state.startReadiness ?? START_BASE;
-  const from = state.createdAt;
+  const from = startOf(state);
   const total = Math.max(1, dayDiff(from, exam));
   const elapsed = Math.min(total, Math.max(0, dayDiff(from, today)));
   const expected = start + (TARGET - start) * (elapsed / total);
@@ -100,7 +100,7 @@ export function dailyMinutes(state, today) {
   const base = state.settings.dailyMinutes || 30;
   if (!state.attempts.length) return base;
   // שבוע ראשון: עוד אין מספיק נתונים כדי לקבוע "מאחור" — לא מעלים זמן
-  if (dayDiff(state.createdAt, today) < 7) return base;
+  if (dayDiff(startOf(state), today) < 7) return base;
   const p = pace(state, today);
   if (p.status === 'behind') return Math.min(45, base + (p.gap < -0.1 ? 15 : 10));
   return base;
@@ -196,7 +196,75 @@ export function wordDeck(state, day) {
   return todaysDeck(WORDS, state.cards, day, { newIntroducedToday: newToday });
 }
 
-export function planForDay(state, day) {
+// תאריך תחילת התוכנית היומית (לפני — אין משימות; אפשר לתרגל חופשי)
+export function startOf(state) {
+  return state.settings?.startDate || state.createdAt;
+}
+
+const MAX_EXTRA = 15;   // תוספת השלמה מקסימלית ליום (דקות)
+const MAX_DAY = 45;     // תקרת יום רגיל
+const CATCH_WINDOW = 14;
+
+// ---------------------------------------------------------------------------
+//  השלמות: מה פוספס בימים האחרונים, ומה כבר הושלם.
+//  • תרגול שלא נעשה → "חוב" דקות, שמתפזר על הימים הבאים (עד 15 ביום).
+//  • בדיקה שבועית שפוספסה → עוברת ליום הבא (במקום התרגול).
+//  • סימולציה שפוספסה → עוברת לשישי/שבת הקרובים (או אחרי 3 ימים).
+//  • מילים, טעויות ושיעורים משלימים את עצמם: מילים שהגיע זמנן נשארות בחבילה,
+//    טעויות נשארות במחברת, ושיעור שלא נלמד נשאר הבא בתור.
+//  יום שלא נפתח בכלל נחשב כיום שבו כל התרגול פוספס. ימי חופש — לא נחשבים.
+// ---------------------------------------------------------------------------
+export function catchUp(state, day) {
+  const start = startOf(state);
+  const out = { debt: 0, missedDays: 0, weeklyDue: null, simDue: null };
+  if (!state.diagnosticDone || day <= start) return out;
+  // סופרים רק מהיום שאחרי האבחון — לפני כן לא היה תרגול רגיל
+  const diag = (state.sessions || []).filter((s) => s.mode === 'diagnostic' && s.complete).map((s) => s.d).sort()[0]
+    || (state.attempts || []).map((a) => a.d).filter(Boolean).sort()[0];
+  if (!diag) return out;
+  const off = new Set(state.settings.offDays || []);
+  let missed = 0, paid = 0;
+  for (let i = CATCH_WINDOW; i >= 1; i--) {
+    const d = addDays(day, -i);
+    if (d < start || d <= diag || off.has(d)) continue;
+    const saved = state.daily?.[d];
+    const plan = saved?.plan;
+    const done = saved?.done || {};
+    if (plan) {
+      if (plan.off || plan.notStarted) continue;
+      const pr = plan.tasks.find((t) => t.id === 'practice');
+      if (pr && !done.practice) { missed += pr.minutes - (pr.extra || 0); out.missedDays++; }
+      if (pr && done.practice) paid += pr.extra || 0;
+    } else {
+      // יום שהאפליקציה לא נפתחה בו
+      const est = planForDay(state, d, { noCatch: true });
+      const pr = est.tasks.find((t) => t.id === 'practice');
+      if (pr) { missed += pr.minutes; out.missedDays++; }
+    }
+  }
+  out.debt = Math.max(0, missed - paid);
+
+  const doneSince = (mode, from) => (state.sessions || []).some((s) => s.mode === mode && s.complete && s.d >= from);
+  // בדיקה שבועית: שישי האחרון (לא היום), אם לא נעשתה מאז
+  for (let i = 1; i <= 6; i++) {
+    const d = addDays(day, -i);
+    if (weekdayOf(d) !== 5) continue;
+    if (d >= start && !off.has(d) && !isSimDay(state, d) && !doneSince('weekly', d)) out.weeklyDue = d;
+    break;
+  }
+  // סימולציה שפוספסה (עד 10 ימים אחורה)
+  for (const s of (state.settings.simDates || []).slice().sort()) {
+    if (s >= day || s < start || dayDiff(s, day) > 10 || off.has(s)) continue;
+    if (doneSince('sim', s)) continue;
+    const wd = weekdayOf(day);
+    if (wd === 5 || wd === 6 || dayDiff(s, day) >= 3) out.simDue = s;
+  }
+  return out;
+}
+
+export function planForDay(state, day, opts = {}) {
+  const start = startOf(state);
+  if (day < start) return { minutes: 0, tasks: [], notStarted: true, startDate: start };
   const minutes = dailyMinutes(state, day);
   const wd = weekdayOf(day);
   const off = (state.settings.offDays || []).includes(day);
@@ -212,10 +280,16 @@ export function planForDay(state, day) {
     tasks.push({ id: 'sim', kind: 'sim', title: 'סימולציה מלאה', sub: '180 שאלות · 3 שעות', minutes: 180, count: 180 });
     return { minutes: 180, tasks, sim: true };
   }
+  const cu = opts.noCatch ? { debt: 0 } : catchUp(state, day);
+  if (cu.simDue) {
+    tasks.push({ id: 'sim', kind: 'sim', title: 'סימולציה מלאה (השלמה)', sub: `במקום ${fmtDay(cu.simDue)} · 180 שאלות`, minutes: 180, count: 180, makeup: cu.simDue });
+    return { minutes: 180, tasks, sim: true, makeup: true };
+  }
   const deck = wordDeck(state, day);
   const wordsMin = deck.length ? Math.max(3, Math.round(deck.length * 0.35)) : 0;
-  if (wd === 5) {
-    tasks.push({ id: 'weekly', kind: 'quiz', mode: 'weekly', title: 'בדיקה שבועית', sub: '32 שאלות · 30 דק׳ בזמן אמת', minutes: 30, count: 32 });
+  if (wd === 5 || cu.weeklyDue) {
+    const makeup = wd !== 5;
+    tasks.push({ id: 'weekly', kind: 'quiz', mode: 'weekly', title: makeup ? 'בדיקה שבועית (השלמה)' : 'בדיקה שבועית', sub: makeup ? `מיום שישי · 32 שאלות · 30 דק׳` : '32 שאלות · 30 דק׳ בזמן אמת', minutes: 30, count: 32, ...(makeup ? { makeup: cu.weeklyDue } : {}) });
     if (deck.length) tasks.push({ id: 'words', kind: 'cards', title: 'כרטיסיות מילים', sub: `${deck.length} מילים`, minutes: wordsMin, count: deck.length });
     return { minutes: 30 + wordsMin, tasks, weekly: true };
   }
@@ -234,10 +308,13 @@ export function planForDay(state, day) {
     lessonMin = 6;
     tasks.push({ id: `lesson-${lessonTopic}`, kind: 'lesson', topic: lessonTopic, title: `לימוד: ${TOPIC[lessonTopic].name}`, sub: 'הסבר קצר עם דוגמאות', minutes: lessonMin });
   }
-  const practiceMin = Math.max(10, minutes - wordsMin - errMin - lessonMin);
+  const basePractice = Math.max(10, minutes - wordsMin - errMin - lessonMin);
+  // השלמה: חלק מהחוב נכנס לתרגול של היום, בלי לעבור את תקרת היום
+  const extra = Math.max(0, Math.min(cu.debt || 0, MAX_EXTRA, MAX_DAY - (wordsMin + errMin + lessonMin + basePractice)));
+  const practiceMin = basePractice + extra;
   const count = Math.max(8, Math.round((practiceMin * 60) / 55));
-  tasks.splice(lessonTopic ? tasks.length : tasks.length, 0, { id: 'practice', kind: 'quiz', mode: 'daily', title: 'תרגול מעורב', sub: `${count} שאלות משולבות`, minutes: practiceMin, count });
-  return { minutes, tasks };
+  tasks.push({ id: 'practice', kind: 'quiz', mode: 'daily', title: 'תרגול מעורב', sub: extra ? `${count} שאלות · ‎+${extra} דק׳ השלמה` : `${count} שאלות משולבות`, minutes: practiceMin, count, ...(extra ? { extra } : {}) });
+  return { minutes: minutes + extra, tasks, ...(extra ? { extra } : {}) };
 }
 
 export function nextLessonTopic(state, day) {
@@ -267,6 +344,10 @@ export function decisions(state, today) {
   }
   const p = pace(state, today);
   const mins = dailyMinutes(state, today);
+  const cu = catchUp(state, today);
+  if (cu.simDue) out.push({ icon: 'calendar-outline', text: `הסימולציה של ${fmtDay(cu.simDue)} פוספסה — היא נכנסה לתוכנית של היום.` });
+  if (cu.weeklyDue) out.push({ icon: 'clipboard-outline', text: `הבדיקה השבועית של ${fmtDay(cu.weeklyDue)} פוספסה — היא עברה להיום, במקום התרגול הרגיל.` });
+  if (cu.debt > 0) out.push({ icon: 'refresh-circle-outline', text: `${cu.debt} דקות תרגול שפוספסו בימים האחרונים — מתפזרות על הימים הבאים, עד ${MAX_EXTRA} דקות ביום.` });
   if (p.status === 'behind') out.push({ icon: 'trending-up', text: `הזמן היומי עלה ל־${mins} דקות — המוכנות ${Math.round(p.now * 100)}% והקצב דורש ${Math.round(p.expected * 100)}%.` });
   else if (p.status === 'ahead') out.push({ icon: 'checkmark-circle-outline', text: `אתה לפני הקצב (${Math.round(p.now * 100)}% מול ${Math.round(p.expected * 100)}%). שומרים על ${mins} דקות ביום.` });
 

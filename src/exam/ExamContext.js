@@ -3,7 +3,7 @@ import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { keyOf, addDays } from './engine/time';
 import { review as srsReview, isDue } from './engine/srs';
-import { planForDay, readiness, trimAttempts, wordDeck } from './engine/brain';
+import { planForDay, readiness, trimAttempts, wordDeck, startOf } from './engine/brain';
 import { scheduleStudyReminders, scheduleEvening } from './notify';
 import { mergeExam } from './engine/merge';
 import { attachExamSync, notifyExamChanged } from './examSync';
@@ -63,7 +63,15 @@ export function ExamProvider({ children }) {
       let s = null;
       try { const raw = await AsyncStorage.getItem(KEY); if (raw) s = JSON.parse(raw); } catch (e) { /* מתחילים מחדש */ }
       const base = defaultExamState();
-      setState(s ? { ...base, ...s, settings: { ...base.settings, ...(s.settings || {}) } } : base);
+      const next = s ? { ...base, ...s, settings: { ...base.settings, ...(s.settings || {}) } } : base;
+      // תאריך התחלה: מי שעוד לא התחיל לענות — התוכנית היומית מתחילה מחר
+      if (!next.settings.startDate) {
+        const today = keyOf();
+        next.settings = { ...next.settings, startDate: next.attempts.length ? next.createdAt : addDays(today, 1) };
+        next.settingsAt = Date.now();
+        if (!next.attempts.length && next.daily?.[today]) { const d = { ...next.daily }; delete d[today]; next.daily = d; }
+      }
+      setState(next);
     })();
   }, []);
 
@@ -92,7 +100,7 @@ export function ExamProvider({ children }) {
 
   // תוכנית היום נקבעת פעם אחת ביום ונשמרת — כך שהרשימה לא "קופצת" תוך כדי היום
   useEffect(() => {
-    if (!state || state.daily?.[today]?.plan) return;
+    if (!state || state.daily?.[today]?.plan || today < startOf(state)) return;
     const p = planForDay(state, today);
     const deck = wordDeck(state, today).map((w) => w.id);
     const tasks = p.tasks.map((t) => (t.id === 'words' ? { ...t, words: deck } : t));
@@ -238,7 +246,7 @@ export function useToday() {
   const ex = useExam();
   if (!ex?.state) return null;
   const { state, today } = ex;
-  const saved = state.daily?.[today];
+  const saved = today >= startOf(state) ? state.daily?.[today] : null;
   const plan = saved?.plan || planForDay(state, today);
   const done = saved?.done || {};
   const off = state.settings.offDays.includes(today);

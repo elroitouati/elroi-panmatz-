@@ -23,7 +23,7 @@ export default function ExamTasksCard({ style }) {
   const { plan, done, off, finished, total } = day;
   const next = plan.tasks.find((t) => !done[t.id]);
   const allDone = total > 0 && !next;
-  const title = off ? 'היום חופש מהמבחן' : allDone ? 'סיימת את המשימות' : plan.sim ? 'יום סימולציה' : plan.weekly ? 'בדיקה שבועית' : 'משימות המבחן';
+  const title = plan.notStarted ? 'מתחילים מחר' : off ? 'היום חופש מהמבחן' : allDone ? 'סיימת את המשימות' : plan.sim ? 'יום סימולציה' : plan.weekly ? 'בדיקה שבועית' : 'משימות המבחן';
 
   return (
     <Flow variant="exam" radius={20} style={[{ padding: 18 }, style]}>
@@ -51,7 +51,7 @@ export default function ExamTasksCard({ style }) {
       }) : null}
       <Press onPress={gate.open} accessibilityLabel="מעבר למשימות המבחן"
         style={{ marginTop: 12, height: 52, borderRadius: 14, backgroundColor: INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <Text style={{ fontFamily: F.b, fontSize: 18, color: '#263B55' }}>{off || allDone ? 'לעולם המבחן' : finished ? 'להמשיך במשימות' : 'לעבור למשימות'}</Text>
+        <Text style={{ fontFamily: F.b, fontSize: 18, color: '#263B55' }}>{off || allDone || plan.notStarted ? 'לעולם המבחן' : finished ? 'להמשיך במשימות' : 'לעבור למשימות'}</Text>
         <Ionicons name="arrow-back" size={18} color="#263B55" />
       </Press>
     </Flow>

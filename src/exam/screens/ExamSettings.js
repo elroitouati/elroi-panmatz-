@@ -69,7 +69,7 @@ export default function ExamSettings({ navigation }) {
   const { state, updateSettings, resetExam } = useExam();
   const st = state.settings;
   const [timeEdit, setTimeEdit] = useState(null); // { key: 0..6 | 'evening', val }
-  const [dateOpen, setDateOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(null); // 'examDate' | 'startDate'
   const [draftDate, setDraftDate] = useState(st.examDate);
   const [resetOpen, setResetOpen] = useState(false);
 
@@ -95,7 +95,8 @@ export default function ExamSettings({ navigation }) {
 
         <SectionTitle>המבחן</SectionTitle>
         <View style={{ backgroundColor: c.surface, borderRadius: 20, overflow: 'hidden' }}>
-          <Row first title="תאריך המבחן" value={`${fmtDay(st.examDate)} · ${HEB_WEEKDAYS_FULL[weekdayOf(st.examDate)]}`} onPress={() => { setDraftDate(st.examDate); setDateOpen(true); }} />
+          <Row first title="תאריך המבחן" value={`${fmtDay(st.examDate)} · ${HEB_WEEKDAYS_FULL[weekdayOf(st.examDate)]}`} onPress={() => { setDraftDate(st.examDate); setDateOpen('examDate'); }} />
+          <Row title="התחלת התוכנית היומית" value={st.startDate ? fmtDay(st.startDate) : '—'} onPress={() => { setDraftDate(st.startDate || st.examDate); setDateOpen('startDate'); }} />
           <View style={{ paddingVertical: 14, paddingHorizontal: 18, borderTopWidth: 1, borderColor: c.mist }}>
             <Text style={[t.body, { fontFamily: font.m }]}>סימולציות מלאות</Text>
             <Text style={t.sub}>{st.simDates.map(fmtDay).join(' · ')}</Text>
@@ -149,8 +150,10 @@ export default function ExamSettings({ navigation }) {
         ) : null}
       </ExamSheet>
 
-      <ExamSheet visible={dateOpen} onClose={() => setDateOpen(false)} title="תאריך המבחן" body="עוד לא נקבע? השאר את סוף ינואר. אפשר לשנות בכל רגע — הקצב יחושב מחדש."
-        primary="שמירה" onPrimary={() => { updateSettings({ examDate: draftDate }); setDateOpen(false); }}>
+      <ExamSheet visible={!!dateOpen} onClose={() => setDateOpen(null)}
+        title={dateOpen === 'startDate' ? 'התחלת התוכנית היומית' : 'תאריך המבחן'}
+        body={dateOpen === 'startDate' ? 'מהיום הזה המערכת בונה לך משימות יומיות (מתחילים באבחון). לפני — אפשר לתרגל חופשי.' : 'עוד לא נקבע? השאר את סוף ינואר. אפשר לשנות בכל רגע — הקצב יחושב מחדש.'}
+        primary="שמירה" onPrimary={() => { updateSettings({ [dateOpen]: draftDate }); setDateOpen(null); }}>
         <View style={{ gap: 12, marginBottom: 22 }}>
           <Stepper label={fmtDay(draftDate)} onPlus={() => setDraftDate(addDays(draftDate, 1))} onMinus={() => setDraftDate(addDays(draftDate, -1))} />
           <Text style={[t.bodyDim, { textAlign: 'center' }]}>יום {HEB_WEEKDAYS_FULL[weekdayOf(draftDate)]}</Text>

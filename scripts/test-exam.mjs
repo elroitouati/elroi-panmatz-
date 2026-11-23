@@ -216,6 +216,41 @@ const time = await imp('engine/time.js');
 }
 ok(brain.dailyMinutes({ ...base, attempts: [{ topic: 'vocab', ok: false, ms: 1, d: '2026-11-23' }], startReadiness: 0.6 }, '2026-11-25') === 30, 'שבוע ראשון בלי תוספת זמן');
 
+// ---- תאריך התחלה ----
+ok(brain.planForDay({ ...base, settings: { ...base.settings, startDate: '2026-11-24' } }, '2026-11-23').notStarted, 'לפני תאריך ההתחלה — אין משימות');
+ok(!brain.planForDay({ ...base, settings: { ...base.settings, startDate: '2026-11-24' } }, '2026-11-24').notStarted, 'ביום ההתחלה — יש משימות');
+
+// ---- השלמות ----
+{
+  const S0 = { ...base, diagnosticDone: true, settings: { ...base.settings, startDate: '2026-11-24' },
+    sessions: [{ id: 'd', mode: 'diagnostic', complete: true, d: '2026-11-24', t: 1 }], attempts: [{ topic: 'vocab', sub: 'tierA', ok: true, ms: 9000, d: '2026-11-24' }] };
+  // 25.11 נפתח ותורגל; 26.11 נפתח ולא תורגל; 29.11 (ראשון) — לא נפתח בכלל
+  const mk = (d, done, extra = 0) => ({ plan: { tasks: [{ id: 'practice', minutes: 18 + extra, ...(extra ? { extra } : {}) }] }, done: done ? { practice: true } : {} });
+  const S1 = { ...S0, daily: { '2026-11-25': mk('2026-11-25', true), '2026-11-26': mk('2026-11-26', false) } };
+  const c1 = brain.catchUp(S1, '2026-11-27');
+  ok(c1.debt === 18, `חוב אחרי יום שפוספס (${c1.debt})`);
+  const S1w = { ...S1, sessions: [...S1.sessions, { id: 'w0', mode: 'weekly', complete: true, d: '2026-11-27', t: 2 }] };
+  const p2 = brain.planForDay(S1w, '2026-11-28');
+  const pr = p2.tasks.find((t) => t.id === 'practice');
+  ok(pr && pr.extra === 15 && /השלמה/.test(pr.sub), `השלמה נכנסת לתרגול (${pr && pr.extra})`);
+  ok(p2.minutes <= 45, `תקרת יום (${p2.minutes})`);
+  // אחרי שעשה את התרגול עם התוספת — החוב יורד
+  const S2 = { ...S1w, daily: { ...S1.daily, '2026-11-28': mk('2026-11-28', true, 15) } };
+  ok(brain.catchUp(S2, '2026-11-29').debt === 3, `החוב יורד אחרי השלמה (${brain.catchUp(S2, '2026-11-29').debt})`);
+  // בדיקה שבועית שפוספסה ביום שישי 27.11 → נכנסת ב-28.11
+  const pw = brain.planForDay(S1, '2026-11-28');
+  ok(pw.tasks[0].id === 'weekly' && pw.tasks[0].makeup === '2026-11-27', 'בדיקה שבועית שפוספסה עוברת ליום הבא');
+  const S3 = { ...S1, sessions: [...S1.sessions, { id: 'w', mode: 'weekly', complete: true, d: '2026-11-27', t: 2 }] };
+  ok(brain.planForDay(S3, '2026-11-28').tasks[0].id !== 'weekly', 'בדיקה שנעשתה לא חוזרת');
+  // סימולציה שפוספסה ב-18.12 (שישי) → שבת 19.12
+  const S4 = { ...S0, daily: {} };
+  ok(brain.planForDay(S4, '2026-12-19').tasks[0].makeup === '2026-12-18', 'סימולציה שפוספסה עוברת לשבת');
+  // יום חופש לא נחשב כפספוס
+  const S5 = { ...S1, settings: { ...S1.settings, offDays: ['2026-11-26'] } };
+  ok(brain.catchUp(S5, '2026-11-27').debt === 0, 'יום חופש לא יוצר חוב');
+  ok(brain.decisions(S1, '2026-11-27').some((d) => /פוספסו/.test(d.text)), 'ההחלטות מסבירות את ההשלמה');
+}
+
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 fs.rmSync(tmp, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);

@@ -1,0 +1,37 @@
+diff --git a/node_modules/react-native-tab-view/lib/commonjs/PagerViewAdapter.js b/node_modules/react-native-tab-view/lib/commonjs/PagerViewAdapter.js
+index f439cfe..bed2f6a 100644
+--- a/node_modules/react-native-tab-view/lib/commonjs/PagerViewAdapter.js
++++ b/node_modules/react-native-tab-view/lib/commonjs/PagerViewAdapter.js
+@@ -104,6 +104,7 @@ function PagerViewAdapter(_ref) {
+     addEnterListener,
+     jumpTo,
+     render: children => /*#__PURE__*/React.createElement(AnimatedViewPager, _extends({}, rest, {
++      layoutDirection: "ltr",
+       ref: pagerRef,
+       style: [styles.container, style],
+       initialPage: index,
+diff --git a/node_modules/react-native-tab-view/lib/module/PagerViewAdapter.js b/node_modules/react-native-tab-view/lib/module/PagerViewAdapter.js
+index d09a316..1e0d369 100644
+--- a/node_modules/react-native-tab-view/lib/module/PagerViewAdapter.js
++++ b/node_modules/react-native-tab-view/lib/module/PagerViewAdapter.js
+@@ -95,6 +95,7 @@ export function PagerViewAdapter(_ref) {
+     addEnterListener,
+     jumpTo,
+     render: children => /*#__PURE__*/React.createElement(AnimatedViewPager, _extends({}, rest, {
++      layoutDirection: "ltr",
+       ref: pagerRef,
+       style: [styles.container, style],
+       initialPage: index,
+diff --git a/node_modules/react-native-tab-view/src/PagerViewAdapter.tsx b/node_modules/react-native-tab-view/src/PagerViewAdapter.tsx
+index cb7073e..bc9efbe 100644
+--- a/node_modules/react-native-tab-view/src/PagerViewAdapter.tsx
++++ b/node_modules/react-native-tab-view/src/PagerViewAdapter.tsx
+@@ -142,6 +142,8 @@ export function PagerViewAdapter<T extends Route>({
+     render: (children) => (
+       <AnimatedViewPager
+         {...rest}
++        // פנמ"צ: כיוון ההחלקה קבוע — אצבע מימין לשמאל עוברת לטאב הבא
++        layoutDirection="ltr"
+         ref={pagerRef}
+         style={[styles.container, style]}
+         initialPage={index}
