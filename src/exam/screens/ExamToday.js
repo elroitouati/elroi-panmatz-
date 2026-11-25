@@ -11,7 +11,7 @@ import { startTask, TASK_ICON } from '../actions';
 import { dayDiff, weekdayOf } from '../engine/time';
 import { wordStats } from '../engine/srs';
 import { WORDS } from '../data/words';
-import { fmtDay, startOf } from '../engine/brain';
+import { fmtDay, startOf, examCountdown } from '../engine/brain';
 import { HEB_WEEKDAYS_FULL } from '../../utils/date';
 import { dir } from '../../design/rtl';
 
@@ -51,7 +51,7 @@ export default function ExamToday({ navigation }) {
     : next ? `עכשיו: ${next.title}` : '';
 
   return (
-    <Page title="היום" over={`יום ${HEB_WEEKDAYS_FULL[wd]} · עוד ${daysLeft} ימים למבחן`}
+    <Page title="היום" over={daysLeft > 0 ? `יום ${HEB_WEEKDAYS_FULL[wd]} · עוד ${daysLeft} ימים לחלון המבחן` : `יום ${HEB_WEEKDAYS_FULL[wd]} · ${examCountdown(state, today)}`}
       action={<Press onPress={() => navigation.navigate('ExamSettings')} accessibilityLabel="הגדרות" scaleTo={0.94} style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="settings-outline" size={24} color={c.ink} /></Press>}>
       {state.activeSim ? (
         <Reveal index={0}>

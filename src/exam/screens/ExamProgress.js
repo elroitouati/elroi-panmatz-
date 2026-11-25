@@ -7,7 +7,7 @@ import Reveal from '../../components/Reveal';
 import Page from '../components/Page';
 import { useX, Bar, Tile, SectionTitle, ON_FLOW, font } from '../ui';
 import { useExam } from '../ExamContext';
-import { pace, PACE_LABEL, topicTable, decisions, openErrors, fmtDay, TARGET, readinessConfidence } from '../engine/brain';
+import { pace, PACE_LABEL, topicTable, decisions, openErrors, fmtDay, TARGET, readinessConfidence, examCountdown } from '../engine/brain';
 import { dir } from '../../design/rtl';
 
 // ============================================================================
@@ -32,7 +32,7 @@ export default function ExamProgress({ navigation }) {
   const chipColor = p.status === 'behind' ? { bg: 'rgba(229,138,130,0.25)', fg: '#FFD5D0' } : { bg: 'rgba(93,187,141,0.22)', fg: '#BDF0D5' };
 
   return (
-    <Page title="התקדמות" over={`עוד ${p.daysLeft} ימים · מבחן ב־${fmtDay(state.settings.examDate)}`}>
+    <Page title="התקדמות" over={examCountdown(state, today)}>
       <Reveal index={0}>
         <Flow variant="exam" style={{ padding: 22 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
@@ -59,7 +59,7 @@ export default function ExamProgress({ navigation }) {
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim }}>הקצב מצפה היום ל־{Math.round(p.expected * 100)}%</Text>
-            <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim }}>יעד: {Math.round(TARGET * 100)}%</Text>
+            <Text style={{ fontFamily: font.m, fontSize: 15, color: ON_FLOW.dim }}>יעד: {Math.round(TARGET * 100)}% עד {fmtDay(state.settings.examDate)}</Text>
           </View>
           <Text style={{ fontFamily: font.r, fontSize: 13.5, lineHeight: 19, color: ON_FLOW.dim, textAlign: dir.start, marginTop: 10 }}>
             המדד מחושב על שאלות קשות מהמבחן. סוג שאלה שעוד לא תרגלת נחשב כניחוש, וסימולציות ובדיקות שבועיות שוקלות יותר.

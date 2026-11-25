@@ -95,7 +95,8 @@ export default function ExamSettings({ navigation }) {
 
         <SectionTitle>המבחן</SectionTitle>
         <View style={{ backgroundColor: c.surface, borderRadius: 20, overflow: 'hidden' }}>
-          <Row first title="תאריך המבחן" value={`${fmtDay(st.examDate)} · ${HEB_WEEKDAYS_FULL[weekdayOf(st.examDate)]}`} onPress={() => { setDraftDate(st.examDate); setDateOpen('examDate'); }} />
+          <Row first title="המבחן — הכי מוקדם" value={`${fmtDay(st.examDate)} · ${HEB_WEEKDAYS_FULL[weekdayOf(st.examDate)]}`} onPress={() => { setDraftDate(st.examDate); setDateOpen('examDate'); }} />
+          <Row title="המבחן — הכי מאוחר" value={`${fmtDay(st.examDateLast || st.examDate)} · ${HEB_WEEKDAYS_FULL[weekdayOf(st.examDateLast || st.examDate)]}`} onPress={() => { setDraftDate(st.examDateLast || st.examDate); setDateOpen('examDateLast'); }} />
           <Row title="התחלת התוכנית היומית" value={st.startDate ? fmtDay(st.startDate) : '—'} onPress={() => { setDraftDate(st.startDate || st.examDate); setDateOpen('startDate'); }} />
           <View style={{ paddingVertical: 14, paddingHorizontal: 18, borderTopWidth: 1, borderColor: c.mist }}>
             <Text style={[t.body, { fontFamily: font.m }]}>סימולציות מלאות</Text>
@@ -171,9 +172,17 @@ export default function ExamSettings({ navigation }) {
       </ExamSheet>
 
       <ExamSheet visible={!!dateOpen} onClose={() => setDateOpen(null)}
-        title={dateOpen === 'startDate' ? 'התחלת התוכנית היומית' : 'תאריך המבחן'}
-        body={dateOpen === 'startDate' ? 'מהיום הזה המערכת בונה לך משימות יומיות (מתחילים באבחון). לפני — אפשר לתרגל חופשי.' : 'עוד לא נקבע? השאר את סוף ינואר. אפשר לשנות בכל רגע — הקצב יחושב מחדש.'}
-        primary="שמירה" onPrimary={() => { updateSettings({ [dateOpen]: draftDate }); setDateOpen(null); }}>
+        title={dateOpen === 'startDate' ? 'התחלת התוכנית היומית' : dateOpen === 'examDateLast' ? 'המבחן — הכי מאוחר' : 'המבחן — הכי מוקדם'}
+        body={dateOpen === 'startDate' ? 'מהיום הזה המערכת בונה לך משימות יומיות (מתחילים באבחון). לפני — אפשר לתרגל חופשי.'
+          : dateOpen === 'examDateLast' ? 'היום האחרון שבו המבחן יכול להתקיים. כשיגיע תאריך מדויק — קבע את שני התאריכים לאותו יום.'
+          : 'היום הראשון שבו המבחן יכול להתקיים. התוכנית מכוונת להיות מוכנים עד אליו — כך לא תופתע אם המבחן יוקדם.'}
+        primary="שמירה" onPrimary={() => {
+          // שומרים על חלון תקין: המוקדם לא אחרי המאוחר
+          if (dateOpen === 'examDate') updateSettings({ examDate: draftDate, ...((st.examDateLast || draftDate) < draftDate ? { examDateLast: draftDate } : null) });
+          else if (dateOpen === 'examDateLast') updateSettings({ examDateLast: draftDate < st.examDate ? st.examDate : draftDate });
+          else updateSettings({ [dateOpen]: draftDate });
+          setDateOpen(null);
+        }}>
         <View style={{ gap: 12, marginBottom: 22 }}>
           <Stepper label={fmtDay(draftDate)} onPlus={() => setDraftDate(addDays(draftDate, 1))} onMinus={() => setDraftDate(addDays(draftDate, -1))} />
           <Text style={[t.bodyDim, { textAlign: 'center' }]}>יום {HEB_WEEKDAYS_FULL[weekdayOf(draftDate)]}</Text>

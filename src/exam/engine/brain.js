@@ -435,6 +435,32 @@ export function fmtDay(k) {
   return `${d} ב${MONTHS[m - 1]}`;
 }
 
+// חלון המבחן: התאריך המדויק לא ידוע — הוא יכול ליפול בכל יום בחלון.
+// examDate = היום הראשון בחלון (התוכנית מכוונת להיות מוכנים עד אליו), examDateLast = האחרון.
+export function examWindow(state) {
+  const first = state.settings.examDate;
+  const last = state.settings.examDateLast && state.settings.examDateLast > first ? state.settings.examDateLast : first;
+  return { first, last, isWindow: last !== first };
+}
+
+export function fmtWindow(state) {
+  const { first, last, isWindow } = examWindow(state);
+  if (!isWindow) return fmtDay(first);
+  const [, m1, d1] = first.split('-').map(Number);
+  const [, m2, d2] = last.split('-').map(Number);
+  // הטווח "18–31" מבודד כ־LTR — אחרת בטקסט עברי הוא מוצג הפוך (31–18)
+  return m1 === m2 ? `\u2066${d1}–${d2}\u2069 ב${MONTHS[m1 - 1]}` : `${fmtDay(first)} – ${fmtDay(last)}`;
+}
+
+// שורת ספירה לאחור: לפני החלון / בתוך החלון / אחריו
+export function examCountdown(state, today) {
+  const { first, last, isWindow } = examWindow(state);
+  const n = dayDiff(today, first);
+  if (n > 0) return isWindow ? `עוד ${n} ימים לחלון המבחן (${fmtWindow(state)})` : `עוד ${n} ימים למבחן (${fmtDay(first)})`;
+  if (today <= last) return isWindow ? `חלון המבחן פתוח · עד ${fmtDay(last)}` : 'המבחן היום';
+  return 'חלון המבחן הסתיים';
+}
+
 export { addDays, subName };
 
 // ---------------------------------------------------------------------------

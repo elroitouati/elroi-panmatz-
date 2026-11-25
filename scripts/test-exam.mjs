@@ -228,6 +228,17 @@ for (let sd = 1; sd < 400; sd++) {
 }
 ok(gram === 0, `logic grammar (${gram})`);
 
+// ---- חלון המבחן (18–31 בינואר) ----
+{
+  const W = { settings: { examDate: '2027-01-18', examDateLast: '2027-01-31' } };
+  const plain = (x) => x.replace(/[\u2066-\u2069]/g, '');
+  ok(plain(brain.fmtWindow(W)) === '18–31 בינואר' && brain.fmtWindow(W).startsWith('\u2066'), `fmtWindow: ${brain.fmtWindow(W)}`);
+  ok(plain(brain.examCountdown(W, '2026-11-25')) === 'עוד 54 ימים לחלון המבחן (18–31 בינואר)', `countdown: ${brain.examCountdown(W, '2026-11-25')}`);
+  ok(brain.examCountdown(W, '2027-01-23') === 'חלון המבחן פתוח · עד 31 בינואר', 'בתוך החלון');
+  ok(brain.examCountdown(W, '2027-02-02') === 'חלון המבחן הסתיים', 'אחרי החלון');
+  ok(brain.fmtWindow({ settings: { examDate: '2027-01-23' } }) === '23 בינואר', 'תאריך יחיד');
+}
+
 // ---- מדד מוכנות: לא קופץ מכמה שאלות בודדות ----
 {
   const r0 = brain.readiness([]);

@@ -31,12 +31,13 @@ export function defaultExamState(today = keyOf(), resetAt = 0) {
     startReadiness: null,
     settings: {
       theme: 'light',
-      examDate: '2027-01-28',
+      examDate: '2027-01-18',     // היום הראשון בחלון המבחן — מתכוננים להיות מוכנים עד אליו
+      examDateLast: '2027-01-31', // היום האחרון בחלון (המבחן יכול ליפול בכל יום בשבועיים האחרונים של ינואר)
       dailyMinutes: 30,
       notify: true,
       studyByDay: { 0: STUDY_DEFAULT, 1: STUDY_DEFAULT, 2: STUDY_DEFAULT, 3: STUDY_DEFAULT, 4: STUDY_DEFAULT, 5: { hour: 14, minute: 0 }, 6: null },
       evening: { hour: 20, minute: 30 },
-      simDates: ['2026-12-18', '2027-01-08', '2027-01-22'],
+      simDates: ['2026-12-18', '2027-01-01', '2027-01-15'],
       offDays: [],
       weeklyOff: [6],   // שבת — יום חופש קבוע מפסיכוטכני
       onDays: [],       // ימי חופש שבחרת בכל זאת להתאמן בהם
@@ -88,6 +89,17 @@ export function ExamProvider({ children }) {
         next.startFix1 = true;
         if (next.settings.startDate === '2026-11-25' && !next.attempts.length) {
           next.settings = { ...next.settings, startDate: '2026-11-24' };
+          next.settingsAt = Date.now();
+        }
+      }
+      // המבחן לא בתאריך קבוע — הוא יכול ליפול בכל יום בשבועיים האחרונים של ינואר.
+      // מעבירים את ברירת המחדל הישנה (28.1) לחלון 18–31.1, והסימולציות זזות לפני החלון.
+      if (!next.examWindow1) {
+        next.examWindow1 = true;
+        if (next.settings.examDate === '2027-01-28') {
+          const sims = JSON.stringify(next.settings.simDates) === JSON.stringify(['2026-12-18', '2027-01-08', '2027-01-22'])
+            ? ['2026-12-18', '2027-01-01', '2027-01-15'] : next.settings.simDates;
+          next.settings = { ...next.settings, examDate: '2027-01-18', examDateLast: '2027-01-31', simDates: sims };
           next.settingsAt = Date.now();
         }
       }
