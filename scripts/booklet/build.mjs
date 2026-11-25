@@ -98,11 +98,11 @@ function cellSvg(c, size = 74) {
 }
 
 function matrixHtml(cells) {
-  return `<div class="matrix">${Array.from({ length: 9 }, (_, i) => `<div class="mc">${i < 8 ? cellSvg(cells[i], 78) : '<span class="qm">?</span>'}</div>`).join('')}</div>`;
+  return `<div class="matrix">${Array.from({ length: 9 }, (_, i) => `<div class="mc">${i < 8 ? cellSvg(cells[i], 52) : '<span class="qm">?</span>'}</div>`).join('')}</div>`;
 }
 
 function chartSvg(ch) {
-  const W = 470, H = 230, L = 40, R = 8, T = 12, B = 28;
+  const W = 460, H = 146, L = 40, R = 8, T = 12, B = 28;
   const all = ch.values.flat();
   const max = Math.ceil((Math.max(...all) + ch.step) / ch.step) * ch.step;
   const n = ch.labels.length, w = W - L - R, h = H - T - B;
@@ -111,7 +111,8 @@ function chartSvg(ch) {
   let s = '';
   for (let v = 0; v <= max; v += ch.step) {
     s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? INK : LIGHT}" stroke-width="${v === 0 ? 1.4 : 0.8}"/>`;
-    s += `<text x="${L - 6}" y="${y(v) + 4}" font-size="11" text-anchor="end" fill="${MID}">${v}</text>`;
+    // כשיש הרבה קווי רשת — מספר על כל קו שני, כדי שהמספרים לא יידחסו
+    if ((v / ch.step) % (max / ch.step > 7 ? 2 : 1) === 0) s += `<text x="${L - 6}" y="${y(v) + 4}" font-size="11" text-anchor="end" fill="${MID}">${v}</text>`;
   }
   // סדר עברי: התקופה הראשונה מימין
   ch.labels.forEach((lb, i) => {
@@ -123,7 +124,7 @@ function chartSvg(ch) {
   });
   const defs = `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#fff"/><line x1="0" y1="0" x2="0" y2="6" stroke="${INK}" stroke-width="2"/></pattern></defs>`;
   const legend = `<div class="legend"><span><i class="sw a"></i>${ch.series[0]}</span><span><i class="sw b"></i>${ch.series[1]}</span></div>`;
-  return `<div class="chart"><div class="ctitle">${ch.title}</div>${legend}<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${defs}${s}</svg></div>`;
+  return `<div class="chart"><div class="chead"><span class="ctitle">${ch.title}</span>${legend}</div><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${defs}${s}</svg></div>`;
 }
 
 function gearPath(cx, cy, R, teeth) {
@@ -233,14 +234,17 @@ function qHtml(q, topic) {
   if (q.kind === 'tech') body = `<div class="diag">${techSvg(q.diagram)}</div>`;
   let opts;
   if (q.kind === 'figures') {
-    opts = `<div class="fopts">${q.options.map((o, i) => `<div class="fo"><div class="fbox">${cellSvg(o, 64)}</div><span class="on">(${i + 1})</span></div>`).join('')}</div>`;
+    opts = `<div class="fopts">${q.options.map((o, i) => `<div class="fo"><div class="fbox">${cellSvg(o, 46)}</div><span class="on">(${i + 1})</span></div>`).join('')}</div>`;
   } else {
     const len = Math.max(...q.options.map((o) => String(o).length));
     const two = TWO_COL.has(topic);
-    const cls = two ? (len > 16 ? 'c1' : 'c2') : len > 30 ? 'c1' : len > 13 ? 'c2' : 'c4';
+    const side = q.kind === 'chart' || (q.kind === 'tech' && q.diagram.type === 'pulley');
+    const cls = two || side ? (len > 16 || side ? 'c1' : 'c2') : len > 30 ? 'c1' : len > 13 ? 'c2' : 'c4';
     opts = `<ol class="opts ${cls}">${q.options.map((o, i) => `<li><span class="on">(${i + 1})</span> ${optText(o)}</li>`).join('')}</ol>`;
   }
-  return `<div class="q k-${q.kind}">${head}${body}${opts}</div>`;
+  // ציור ותשובות זה לצד זה — חוסך חצי עמוד בכל שאלה עם ציור גבוה
+  const sideBySide = q.kind === 'figures' || q.kind === 'chart' || (q.kind === 'tech' && q.diagram.type === 'pulley');
+  return `<div class="q k-${q.kind}">${head}${sideBySide ? `<div class="side">${body}${opts}</div>` : body + opts}</div>`;
 }
 
 const fontB64 = (w) => fs.readFileSync(path.join(root, `node_modules/@expo-google-fonts/heebo/${w}/Heebo_${w}.ttf`)).toString('base64');
@@ -252,8 +256,8 @@ sections.forEach((s, si) => {
   const from = num + 1;
   const qs = s.qs.map((q) => qHtml(q, s.topic)).join('');
   sectionsHtml += `<section class="sec">
-    <header class="sh"><div class="sn">פרק ${si + 1}</div><div class="st">${t.name}</div><div class="sm">שאלות ${from}–${num} · זמן מומלץ: ${MINUTES[s.topic]} דקות</div></header>
-    <p class="tip">${TIPS[s.topic]}</p>
+    <div class="shead"><header class="sh"><div class="sn">פרק ${si + 1}</div><div class="st">${t.name}</div><div class="sm">שאלות ${from}–${num} · זמן מומלץ: ${MINUTES[s.topic]} דקות</div></header>
+    <p class="tip">${TIPS[s.topic]}</p></div>
     <div class="qs ${TWO_COL.has(s.topic) ? 'two' : ''}">${qs}</div>
   </section>`;
 });
@@ -294,15 +298,17 @@ svg{direction:ltr}
 table.plan{border-collapse:collapse;width:100%;margin-top:5mm}
 table.plan td,table.plan th{border-bottom:1px solid ${LIGHT};padding:2mm 3mm;text-align:right}
 table.plan th{font-weight:700;color:${MID};font-size:9.5pt}
-.sec{page-break-before:always}
+.sec{margin-top:9mm}
+.sec:first-of-type{page-break-before:always;margin-top:0}
+.shead{break-inside:avoid;break-after:avoid;page-break-after:avoid}
 .sh{display:flex;align-items:baseline;gap:4mm;border-bottom:2.5px solid ${OLIVE};padding-bottom:2mm}
 .sn{background:${OLIVE};color:#fff;font-weight:700;padding:0.6mm 3mm;border-radius:2mm;font-size:10pt}
 .st{font-size:18pt;font-weight:900}
 .sm{margin-inline-start:auto;color:${MID};font-size:9.5pt}
 .tip{color:${MID};font-size:9.5pt;margin:2mm 0 4mm}
 .qs.two{columns:2;column-gap:9mm;column-rule:1px solid #e5e7de}
-.q{break-inside:avoid;page-break-inside:avoid;margin-bottom:5mm}
-.qs:not(.two) .q{border-bottom:1px dashed ${LIGHT};padding-bottom:4mm}
+.q{break-inside:avoid;page-break-inside:avoid;margin-bottom:4mm}
+.qs:not(.two) .q{border-bottom:1px dashed ${LIGHT};padding-bottom:3mm}
 .qh{display:flex;gap:2.5mm}
 .qn{flex:none;min-width:7mm;height:7mm;border-radius:50%;background:${INK};color:#fff;font-weight:700;font-size:9.5pt;display:flex;align-items:center;justify-content:center;margin-top:0.3mm}
 .qp{font-weight:700}
@@ -314,16 +320,20 @@ table.plan th{font-weight:700;color:${MID};font-size:9.5pt}
 .opts{list-style:none;padding:0;margin:1.5mm 9.5mm 0 0;display:grid;gap:1mm 5mm}
 .opts.c1{grid-template-columns:1fr}.opts.c2{grid-template-columns:1fr 1fr}.opts.c4{grid-template-columns:repeat(4,1fr)}
 .on{font-weight:700;color:${MID}}
-.matrix{display:grid;grid-template-columns:repeat(3,25mm);grid-auto-rows:25mm;border:1.5px solid ${INK};width:max-content;margin:2.5mm auto 2mm}
+.matrix{display:grid;grid-template-columns:repeat(3,16.5mm);grid-auto-rows:16.5mm;border:1.5px solid ${INK};width:max-content;margin:0}
 .mc{display:flex;align-items:center;justify-content:center;border-inline-start:1px solid ${LIGHT};border-top:1px solid ${LIGHT}}
 .mc:nth-child(3n+1){border-inline-start:0}.mc:nth-child(-n+3){border-top:0}
 .qm{font-size:24pt;font-weight:900;color:${MID}}
-.fopts{display:flex;justify-content:center;gap:7mm;margin-top:2mm}
+.fopts{display:grid;grid-template-columns:repeat(2,auto);gap:1.5mm 6mm}
 .fo{display:flex;flex-direction:column;align-items:center;gap:1mm}
-.fbox{border:1.2px solid ${INK};width:21mm;height:21mm;display:flex;align-items:center;justify-content:center}
-.chart{margin:2mm auto;width:max-content;text-align:center}
+.fbox{border:1.2px solid ${INK};width:15mm;height:15mm;display:flex;align-items:center;justify-content:center}
+.chart{margin:0;width:max-content;text-align:center}
+.side{display:flex;align-items:center;justify-content:center;gap:12mm;margin:1.5mm 9.5mm 0 0}
+.side .opts{margin:0;min-width:38mm}
+.side .diag{margin:0}
 .ctitle{font-weight:700;font-size:10pt}
-.legend{display:flex;gap:6mm;justify-content:center;font-size:9pt;margin:1mm 0}
+.legend{display:flex;gap:4mm;font-size:9pt}
+.chead{display:flex;gap:6mm;justify-content:center;align-items:baseline;margin-bottom:0.5mm}
 .sw{display:inline-block;width:3.5mm;height:3.5mm;margin-inline-end:1.5mm;vertical-align:-0.5mm;border:1px solid ${INK}}
 .sw.a{background:${OLIVE}}
 .sw.b{background:repeating-linear-gradient(45deg,#fff 0 1.2px,${INK} 1.2px 2.2px)}
