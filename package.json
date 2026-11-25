@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "node scripts/test-edge-cases.mjs && node scripts/test-sync.mjs && node scripts/test-exam.mjs",
-    "deploy:web": "bash scripts/deploy-web.sh"
+    "deploy:web": "bash scripts/deploy-web.sh",
+    "booklet": "node scripts/booklet/build.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/heebo": "^0.4.2",
