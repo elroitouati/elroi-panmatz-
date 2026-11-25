@@ -41,8 +41,9 @@ for (const t of TOPICS) {
         && !opts.some((o) => o.includes('NaN') || o.includes('undefined') || o.includes('Infinity'));
       if (!valid) { bad++; sample = sample || q; }
       if (t.id === 'series') {
-        const all = [...q.seq, Number(q.options[q.answer])];
-        if (all.some((n) => !Number.isFinite(Number(n)))) { bad++; sample = q; }
+        // גרסה 2: התשובה היא זוג ("x, y") והוא חייב להתאים ל־answerPair
+        const all = [...q.seq, ...q.answerPair];
+        if (all.some((n) => !Number.isFinite(Number(n))) || q.options[q.answer] !== q.answerPair.join(', ') || q.blanks !== 2) { bad++; sample = q; }
       }
     }
     ok(bad === 0, `${t.id}/${sub}: ${bad} שאלות פגומות ${sample ? JSON.stringify(sample).slice(0, 300) : ''}`);
@@ -64,17 +65,62 @@ for (const t of TOPICS) {
 ok(JSON.stringify(makeQuestion({ topic: 'logic', sub: 'order', seed: 42 })) === JSON.stringify(makeQuestion({ topic: 'logic', sub: 'order', seed: 42 })), 'same seed same question');
 ok(makeQuestion({ topic: 'vocab', sub: null, seed: 5, ref: WORDS[10].id }).wordId === WORDS[10].id, 'vocab ref respected');
 
-// סדרות: התשובה באמת ממשיכה את החוק (בדיקה ידנית לתת־נושא add)
+// ---- גרסה 1 (שאלות ישנות שנשמרו) ממשיכה להיבנות בדיוק כמו קודם ----
+ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5, qid: 'series:add:5:' }).v === 1, 'qid ישן → מחולל v1');
+ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5, qid: 'series:add:5::v2' }).v === 2, 'qid חדש → מחולל v2');
+ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5 }).v === 2, 'שאלה חדשה → v2');
+ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5, v: 1 }).id === 'series:add:5:', 'מזהה v1 לא השתנה');
+ok(/:v2$/.test(makeQuestion({ topic: 'logic', sub: 'order', seed: 5 }).id), 'מזהה v2 מסומן');
+for (const t of TOPICS) {
+  let bad = 0;
+  for (let s = 1; s <= 60; s++) {
+    const a = makeQuestion({ topic: t.id, seed: s * 17, v: 1 });
+    const b = makeQuestion({ topic: t.id, sub: a.sub, seed: s * 17, ref: a.ref, qid: a.id });
+    if (JSON.stringify(a) !== JSON.stringify(b) || a.options.length !== 4) bad++;
+  }
+  ok(bad === 0, `v1 ${t.id} נבנית מחדש מה־qid (${bad})`);
+}
+
+// סדרות v1: התשובה באמת ממשיכה את החוק (בדיקה ידנית לתת־נושא add)
 for (let s = 1; s < 200; s++) {
-  const q = makeQuestion({ topic: 'series', sub: 'add', seed: s });
+  const q = makeQuestion({ topic: 'series', sub: 'add', seed: s, v: 1 });
   const d = q.seq[1] - q.seq[0];
   ok(Number(q.options[q.answer]) === q.seq[q.seq.length - 1] + d, `series add ${s}`);
 }
-// צורות: חיבור = איחוד
+// צורות v1: חיבור = איחוד
 for (let s = 1; s < 200; s++) {
-  const q = makeQuestion({ topic: 'figures', sub: 'union', seed: s });
+  const q = makeQuestion({ topic: 'figures', sub: 'union', seed: s, v: 1 });
   const a = q.matrix[6].s, b = q.matrix[7].s, c = q.options[q.answer].s;
   ok(JSON.stringify([...new Set([...a, ...b])].sort((x, y) => x - y)) === JSON.stringify(c), `figures union ${s}`);
+}
+// צורות v2: חיבור לפי שורה או לפי טור; ביטול; התא החסר הוא האחרון (למטה מימין)
+const U = (a, b) => JSON.stringify([...new Set([...a, ...b])].sort((x, y) => x - y));
+const X = (a, b) => JSON.stringify([...a, ...b].filter((x) => !(a.includes(x) && b.includes(x))).sort((x, y) => x - y));
+for (let s = 1; s < 200; s++) {
+  const q = makeQuestion({ topic: 'figures', sub: 'union', seed: s });
+  const m = q.matrix, c = JSON.stringify(q.options[q.answer].s);
+  const row = U(m[6].s, m[7].s) === c && U(m[0].s, m[1].s) === JSON.stringify(m[2].s);
+  const col = U(m[2].s, m[5].s) === c && U(m[0].s, m[3].s) === JSON.stringify(m[6].s);
+  ok(q.ltr && (row || col), `figures v2 union ${s}`);
+  const z = makeQuestion({ topic: 'figures', sub: 'xor', seed: s });
+  const n = z.matrix, d = JSON.stringify(z.options[z.answer].s);
+  ok((X(n[6].s, n[7].s) === d && X(n[0].s, n[1].s) === JSON.stringify(n[2].s)) || (X(n[2].s, n[5].s) === d && X(n[0].s, n[3].s) === JSON.stringify(n[6].s)), `figures v2 xor ${s}`);
+}
+// סדרות v2: הזוג הנכון מופיע פעם אחת, ותמיד יש מסיח שהמספר הראשון בו נכון
+for (let s = 1; s < 300; s++) {
+  const q = makeQuestion({ topic: 'series', seed: s });
+  const firsts = q.options.map((o) => o.split(', ')[0]);
+  ok(q.options.filter((o) => o === q.answerPair.join(', ')).length === 1 && firsts.filter((f) => f === String(q.answerPair[0])).length >= 2, `series v2 pair ${s}`);
+}
+// היגיון v2: "אין פתרון" מופיע גם כמסיח וגם כתשובה נכונה
+{
+  let asAns = 0, asWrong = 0;
+  for (let s = 1; s < 400; s++) {
+    const q = makeQuestion({ topic: 'logic', sub: 'order', seed: s });
+    const i = q.options.indexOf('אין פתרון');
+    if (i === q.answer) asAns++; else if (i >= 0) asWrong++;
+  }
+  ok(asAns > 10 && asWrong > 50, `אין פתרון: נכון ${asAns}, מסיח ${asWrong}`);
 }
 
 // ---- תוכן ----
@@ -178,9 +224,23 @@ ok(!!E2.errors.q1, 'error made again after resolve comes back');
 let gram = 0;
 for (let sd = 1; sd < 400; sd++) {
   const q = makeQuestion({ topic: 'logic', sub: 'order', seed: sd });
-  if (/(בתיה|דנה|הדר|ורד) (עומד |ראשון|אחרון)/.test(q.prompt) || /(אבי|גיל|זיו) (עומדת|ראשונה|אחרונה)/.test(q.prompt)) gram++;
+  if (/(בתיה|דנה|הדר|ורד) (עומד (?!אדם)|ראשון|אחרון)/.test(q.prompt) || /(אבי|גיל|זיו) (עומדת|ראשונה|אחרונה)/.test(q.prompt)) gram++;
 }
 ok(gram === 0, `logic grammar (${gram})`);
+
+// ---- מדד מוכנות: לא קופץ מכמה שאלות בודדות ----
+{
+  const r0 = brain.readiness([]);
+  ok(Math.abs(r0 - 0.25) < 1e-9, `בלי נתונים = ניחוש (${r0})`);
+  const few = Array.from({ length: 3 }, (_, i) => ({ topic: 'vocab', sub: 'tierB', ok: true, ms: 9000, mode: 'daily', d: '2026-11-25' }));
+  const sFew = brain.statsFor(few, 'vocab', 'tierB').mastery;
+  ok(sFew < 0.45, `3 תשובות נכונות לא נותנות יותר מ־45% (${sFew.toFixed(2)})`);
+  const st = brain.strengthOf(few, 'vocab');
+  ok(st.covered === 0 && st.strength < 0.35, `נושא עם סוג אחד שתורגל מעט — חוזק נמוך (${st.strength.toFixed(2)})`);
+  const many = TOPICS.flatMap((t) => t.subs.flatMap(([sub]) => Array.from({ length: 40 }, () => ({ topic: t.id, sub, ok: true, ms: 5000, mode: 'daily', d: '2026-12-01' }))));
+  ok(brain.readiness(many) > 0.85, `הכול נכון בכל הסוגים → מוכנות גבוהה (${brain.readiness(many).toFixed(2)})`);
+  ok(brain.readinessConfidence(few).solid === false && brain.readinessConfidence(many).solid === true, 'ביטחון במדד');
+}
 
 // ---- סימולציה של 70 ימי שימוש ----
 const { makeRng } = await imp('gen/rng.js');

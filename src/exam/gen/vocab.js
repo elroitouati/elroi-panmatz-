@@ -5,10 +5,11 @@ import { WORDS } from '../data/words';
 
 const SUB_TIER = { tierA: 'A', tierB: 'B', phrases: 'P' };
 
-export function vocabQuestion(seed, sub, wordId) {
+// hard = גרסה 2: יותר מילים נדירות וביטויים, פחות מילים נפוצות
+export function vocabQuestion(seed, sub, wordId, hard = false) {
   const r = makeRng(seed);
   // צורכים את ה-RNG תמיד באותו סדר — כדי ששחזור עם wordId ייתן שאלה זהה
-  const pickedSub = r.pick(['tierA', 'tierA', 'tierB', 'tierB', 'phrases']);
+  const pickedSub = r.pick(hard ? ['tierA', 'tierB', 'tierB', 'tierB', 'phrases', 'phrases'] : ['tierA', 'tierA', 'tierB', 'tierB', 'phrases']);
   const fixed = wordId ? WORDS.find((x) => x.id === wordId) : null;
   let s = fixed ? Object.keys(SUB_TIER).find((k) => SUB_TIER[k] === fixed.tier) : sub && SUB_TIER[sub] ? sub : pickedSub;
   const pool = WORDS.filter((x) => x.tier === SUB_TIER[s]);

@@ -1,58 +1,80 @@
-// הבנה טכנית: גלגלי שיניים, מנופים וגלגלות — במחולל עם תרשים; עקרונות — מהמאגר.
+// הבנה טכנית — רמה קשה. גלגלי שיניים (שרשרת עם גלגל אמצעי, כיוון, סיבובים לדקה),
+// מנוף עם שני משקלים, גלגלות (כוח ואורך חבל), ועקרונות פיזיקליים מהמאגר.
 import { makeRng, withDistractors } from './rng';
 import { TECH_CONCEPTS } from '../data/technical';
 
 const SUBS = ['gears', 'levers', 'pulleys', 'concepts', 'concepts'];
+const HEB = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ז׳'];
+const DIRN = { cw: 'עם כיוון השעון', ccw: 'נגד כיוון השעון' };
+const r1 = (x) => String(Math.round(x * 10) / 10);
 
 function gears(r) {
-  const kind = r.int(0, 1);
-  if (kind === 0) {
-    const n = r.int(3, 5);
-    const first = r.pick(['cw', 'ccw']);
-    const teeth = Array.from({ length: n }, () => r.pick([10, 12, 16, 20]));
-    const same = (n - 1) % 2 === 0;
-    const ans = same ? first : first === 'cw' ? 'ccw' : 'cw';
-    const name = { cw: 'עם כיוון השעון', ccw: 'נגד כיוון השעון' };
+  const kind = r.pick(['idler', 'dir', 'rpm']);
+  if (kind === 'idler') {
+    const a = r.pick([12, 16, 18, 24, 30, 36, 40, 48]), b = r.pick([10, 14, 20, 25]), c = r.pick([8, 9, 12, 15, 20]);
+    const k = r.pick([2, 3, 4, 5, 6, 10]);
+    const ans = (a * k) / c;
+    if (!Number.isInteger(ans) || a === c || ans === k) return gears(r);
     return {
-      diagram: { type: 'gears', teeth, first, ask: n - 1 },
-      prompt: `${n} גלגלי שיניים משולבים בשורה. הגלגל הימני מסתובב ${name[first]}. לאיזה כיוון יסתובב הגלגל השמאלי?`,
-      correct: name[ans], wrong: [name[ans === 'cw' ? 'ccw' : 'cw'], 'לא יסתובב', 'תלוי במספר השיניים'],
-      explain: 'כל שני גלגלים משולבים מסתובבים בכיוונים הפוכים. לכן הכיוון מתחלף בכל גלגל: גלגל במקום אי־זוגי — כמו הראשון.',
+      diagram: { type: 'gears', teeth: [a, b, c], labels: HEB.slice(0, 3) },
+      prompt: `שלושה גלגלי שיניים משולבים בשורה: לגלגל א׳ ${a} שיניים, לגלגל ב׳ (באמצע) ${b} שיניים, ולגלגל ג׳ ${c} שיניים. גלגל א׳ השלים ${k} סיבובים. כמה סיבובים השלים גלגל ג׳?`,
+      correct: String(ans), wrong: [r1((a * k) / b), r1((c * k) / a), String(k), r1((b * k) / c)],
+      explain: `הגלגל האמצעי משנה רק את הכיוון, לא את היחס. בכל גלגל עוברות ${a}×${k} = ${a * k} שיניים, ולכן ג׳ מסתובב ${a * k}/${c} = ${ans} פעמים.`,
     };
   }
-  const a = r.pick([12, 15, 20, 24, 30, 36, 40]), b = r.pick([6, 8, 10, 12, 18, 20, 60]);
-  const k = r.pick([2, 3, 4, 5, 6, 10]);
-  const ans = (a * k) / b;
+  if (kind === 'dir') {
+    const n = r.int(5, 7);
+    const teeth = Array.from({ length: n }, () => r.pick([10, 14, 18, 22]));
+    const first = r.pick(['cw', 'ccw']);
+    const ask = r.int(2, n - 1);
+    const ans = ask % 2 === 0 ? first : first === 'cw' ? 'ccw' : 'cw';
+    return {
+      diagram: { type: 'gears', teeth, labels: HEB.slice(0, n), first },
+      prompt: `${n} גלגלי שיניים משולבים בשורה, מ־א׳ (מימין) עד ${HEB[n - 1]}. גלגל א׳ מסתובב ${DIRN[first]}. לאיזה כיוון מסתובב גלגל ${HEB[ask]}?`,
+      correct: DIRN[ans], wrong: [DIRN[ans === 'cw' ? 'ccw' : 'cw'], 'הוא לא מסתובב', 'תלוי במספר השיניים'],
+      explain: `כל שני גלגלים משולבים מסתובבים בכיוונים הפוכים. גלגל ${HEB[ask]} הוא ה־${ask + 1} בשורה — ${ask % 2 === 0 ? 'מקום אי־זוגי, כמו א׳' : 'מקום זוגי, הפוך מ־א׳'}.`,
+    };
+  }
+  const a = r.pick([20, 30, 40, 60]), b = r.pick([12, 15, 24, 80]), rpm = r.pick([30, 45, 60, 90, 120]);
+  const ans = (a * rpm) / b;
   if (!Number.isInteger(ans) || a === b) return gears(r);
   return {
-    diagram: { type: 'gears', teeth: [a, b], first: 'cw', ask: 1, labels: true },
-    prompt: `לגלגל א׳ יש ${a} שיניים ולגלגל ב׳ יש ${b} שיניים. גלגל א׳ השלים ${k} סיבובים. כמה סיבובים השלים גלגל ב׳?`,
-    correct: String(ans), wrong: [String((b * k) / a), String(k), String(ans + k)].filter((x) => Number.isFinite(Number(x))),
-    explain: `בכל סיבוב עוברות אותן שיניים בשני הגלגלים: ${a}×${k} = ${a * k} שיניים. ב׳ מסובב ${a * k}/${b} = ${ans} סיבובים. גלגל קטן — מסתובב יותר.`,
+    diagram: { type: 'gears', teeth: [a, b], labels: HEB.slice(0, 2) },
+    prompt: `גלגל א׳ (${a} שיניים) מסתובב ${rpm} סיבובים בדקה ומשולב בגלגל ב׳ (${b} שיניים). כמה סיבובים בדקה מסתובב גלגל ב׳?`,
+    correct: String(ans), wrong: [r1((b * rpm) / a), String(rpm), String(ans * 2)],
+    explain: `השיניים שעוברות בדקה זהות בשני הגלגלים: ${a}×${rpm} = ${a * rpm}. גלגל ב׳: ${a * rpm}/${b} = ${ans}.`,
   };
 }
 
 function levers(r) {
-  const w = r.pick([10, 20, 30, 40, 60]), d1 = r.int(1, 4), d2 = r.int(1, 6);
-  const ans = (w * d1) / d2;
-  if (!Number.isInteger(ans) || d1 === d2) return levers(r);
+  const w1 = r.pick([10, 20, 30, 40]), d1 = r.int(1, 2), w2 = r.pick([10, 20, 30]), d2 = r.int(3, 4), d3 = r.pick([2, 3, 4, 5]);
+  const m = w1 * d1 + w2 * d2, ans = m / d3;
+  if (!Number.isInteger(ans)) return levers(r);
   return {
-    diagram: { type: 'lever', w, d1, d2 },
-    prompt: `על מוט מאוזן מונח משקל של ${w} ק״ג במרחק ${d1} מ׳ מנקודת המשען. איזה משקל צריך לשים במרחק ${d2} מ׳ בצד השני כדי שהמוט יהיה מאוזן?`,
-    correct: `${ans} ק״ג`, wrong: [`${(w * d2) / d1} ק״ג`, `${w} ק״ג`, `${ans + 10} ק״ג`],
-    explain: `איזון: משקל × מרחק שווה בשני הצדדים. ${w}×${d1} = ${w * d1}, לכן ${w * d1}/${d2} = ${ans} ק״ג.`,
+    diagram: { type: 'lever2', right: [[w1, d1], [w2, d2]], left: d3 },
+    prompt: `על מוט, בצד ימין של נקודת המשען, מונחים ${w1} ק״ג במרחק ${d1} מ׳ ו־${w2} ק״ג במרחק ${d2} מ׳. איזה משקל צריך לשים בצד שמאל, במרחק ${d3} מ׳, כדי שהמוט יהיה מאוזן?`,
+    correct: `${ans} ק״ג`, wrong: [`${w1 + w2} ק״ג`, `${r1(((w1 + w2) * Math.max(d1, d2)) / d3)} ק״ג`, `${ans + 10} ק״ג`, `${r1((w1 + w2) / d3)} ק״ג`],
+    explain: `סכום המומנטים בימין: ${w1}×${d1} + ${w2}×${d2} = ${m}. בשמאל: x×${d3} = ${m}, ולכן x = ${ans} ק״ג.`,
   };
 }
 
 function pulleys(r) {
-  const n = r.pick([1, 2, 3, 4]);
-  const w = r.pick([60, 120, 240]);
+  const n = r.pick([2, 3, 4, 6]), w = r.pick([120, 180, 240, 360]);
+  if (r.chance(0.5)) {
+    const h = r.pick([2, 3, 5]);
+    return {
+      diagram: { type: 'pulley', n, w },
+      prompt: `במערכת גלגלות ${n} חבלים מחזיקים את המשא. כדי להרים את המשא לגובה ${h} מטרים, כמה מטרים של חבל צריך למשוך?`,
+      correct: `${n * h} מ׳`, wrong: [`${h} מ׳`, `${r1(h / n)} מ׳`, `${(n + 1) * h} מ׳`, `${2 * h} מ׳`],
+      explain: `כל אחד מ־${n} החבלים מתקצר ב־${h} מ׳, ולכן מושכים ${n}×${h} = ${n * h} מ׳. מה שחוסכים בכוח — משלמים במרחק.`,
+    };
+  }
   const ans = w / n;
   return {
     diagram: { type: 'pulley', n, w },
-    prompt: `במערכת הגלגלות שבתרשים, המשא שוקל ${w} ק״ג ו־${n} ${n === 1 ? 'חבל מחזיק' : 'חבלים מחזיקים'} אותו. איזה כוח צריך כדי להרים אותו (בלי חיכוך)?`,
-    correct: `${ans} ק״ג`, wrong: [`${w} ק״ג`, `${w * 2} ק״ג`, `${w / (n + 1)} ק״ג`].filter((x, i, a) => a.indexOf(x) === i),
-    explain: `הכוח מתחלק בין החבלים שמחזיקים את המשא: ${w}/${n} = ${ans}. בתמורה — מושכים חבל ארוך פי ${n}.`,
+    prompt: `במערכת גלגלות ${n} חבלים מחזיקים משא של ${w} ק״ג. מה הכוח הדרוש כדי להרים את המשא (בלי חיכוך, גלגלות חסרות משקל)?`,
+    correct: `${ans} ק״ג`, wrong: [`${w} ק״ג`, `${w / 2} ק״ג`, `${Math.round(w / (n + 1))} ק״ג`, `${w * n} ק״ג`],
+    explain: `המשקל מתחלק שווה בין ${n} החבלים: ${w}/${n} = ${ans} ק״ג.`,
   };
 }
 
@@ -71,5 +93,5 @@ export function technicalQuestion(seed, sub, fixedId) {
     q = { prompt: c.q, correct: c.correct, wrong: c.wrong, explain: c.explain, itemId: c.id };
   }
   const { options, answer } = withDistractors(r, q.correct, [...q.wrong, 'אף תשובה'], String);
-  return { topic: 'technical', sub: s, seed, kind: q.diagram ? 'tech' : 'text', diagram: q.diagram, itemId: q.itemId, prompt: q.prompt, options, answer, explain: q.explain };
+  return { topic: 'technical', sub: s, seed, kind: q.diagram ? 'tech' : 'text', v: 2, diagram: q.diagram, itemId: q.itemId, prompt: q.prompt, options, answer, explain: q.explain };
 }

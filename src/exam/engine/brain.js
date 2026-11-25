@@ -16,8 +16,9 @@ import { WORDS } from '../data/words';
 import { todaysDeck, wordStats } from './srs';
 
 export const TARGET = 0.9;           // היעד ביום המבחן ("100, לא 95")
-export const START_BASE = 0.35;      // הערכת פתיחה לפני שיש נתונים
-const PRIOR_K = 4;                   // כמה "שאלות דמיוניות" של 25% בהתחלה
+export const START_BASE = 0.25;      // הערכת פתיחה לפני שיש נתונים (= ניחוש)
+const PRIOR_K = 12;                  // "שאלות דמיוניות" של 25% בהתחלה — דועכות ככל שיש יותר נתונים
+const EXAM_MODES = new Set(['sim', 'weekly', 'diagnostic']); // בתנאי מבחן — שוקלים יותר
 const DECAY = 0.94;                  // משקל ניסיון ישן לעומת חדש
 const MAX_ATTEMPTS = 6000;
 
@@ -41,11 +42,14 @@ export function statsFor(attempts, topic, sub) {
   const n = list.length;
   let w = 0, wc = 0;
   for (let i = n - 1, k = 0; i >= 0; i--, k++) {
-    const weight = DECAY ** k;
+    const weight = DECAY ** k * (EXAM_MODES.has(list[i].mode) ? 1.5 : 1);
     w += weight;
     if (list[i].ok) wc += weight;
   }
-  const mastery = (wc + 0.25 * PRIOR_K) / (w + PRIOR_K);
+  // ההנחה ההתחלתית (25% = ניחוש) חזקה כשיש מעט שאלות, ונחלשת כשמצטברים נתונים:
+  // 3 תשובות נכונות ≈ 42%, ולא 57% כמו קודם. כך המדד לא קופץ מכמה שאלות בודדות.
+  const K = (PRIOR_K * PRIOR_K) / (PRIOR_K + n);
+  const mastery = (wc + 0.25 * K) / (w + K);
   const recent = list.slice(-20);
   const recentAcc = recent.length ? recent.filter((a) => a.ok).length / recent.length : 0;
   const okTimes = recent.filter((a) => a.ok).map((a) => a.ms);
@@ -62,19 +66,42 @@ export function statsFor(attempts, topic, sub) {
   };
 }
 
-export function topicTable(attempts) {
-  return TOPICS.map((t) => ({ ...t, stats: statsFor(attempts, t.id), subs: t.subs.map(([id, name]) => ({ id, name, stats: statsFor(attempts, t.id, id) })) }));
+// חוזק בנושא = ממוצע השליטה בכל סוגי השאלות שלו. סוג שעוד לא תורגל נחשב כניחוש (25%),
+// ולכן נושא שתרגלת בו רק סוג אחד קל לא ייראה חזק. coverage = כמה סוגים תורגלו (5+ שאלות).
+export function strengthOf(attempts, topicId) {
+  const t = TOPICS.find((x) => x.id === topicId);
+  const subs = t.subs.map(([id]) => statsFor(attempts, topicId, id));
+  const strength = subs.reduce((a, x) => a + x.mastery, 0) / subs.length;
+  const covered = subs.filter((x) => x.n >= 5).length;
+  return { strength, covered, subsTotal: subs.length };
 }
 
-// מוכנות = ממוצע משוקלל לפי משקל הנושא במבחן, עם קנס על איטיות.
+export function topicTable(attempts) {
+  return TOPICS.map((t) => {
+    const stats = statsFor(attempts, t.id);
+    const st = strengthOf(attempts, t.id);
+    return { ...t, stats: { ...stats, ...st }, subs: t.subs.map(([id, name]) => ({ id, name, stats: statsFor(attempts, t.id, id) })) };
+  });
+}
+
+// מוכנות = ממוצע משוקלל של החוזק בכל נושא לפי משקלו במבחן, עם קנס על איטיות.
 export function readiness(attempts) {
   let sum = 0;
   for (const t of TOPICS) {
     const s = statsFor(attempts, t.id);
     const speed = s.slow ? 0.9 : 1;
-    sum += t.weight * s.mastery * speed;
+    sum += t.weight * strengthOf(attempts, t.id).strength * speed;
   }
   return sum / TOTAL_WEIGHT;
+}
+
+// כמה אפשר לסמוך על המדד: צריך לפחות 15 שאלות בכל נושא ו־200 בסך הכול
+export function readinessConfidence(attempts) {
+  const real = attempts.filter((a) => a.mode !== 'lesson');
+  const perTopic = TOPICS.map((t) => real.filter((a) => a.topic === t.id).length);
+  const minTopic = Math.min(...perTopic);
+  const conf = Math.min(1, real.length / 200, minTopic / 15);
+  return { conf, n: real.length, solid: conf >= 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -82,7 +109,9 @@ export function readiness(attempts) {
 // ---------------------------------------------------------------------------
 export function pace(state, today) {
   const exam = state.settings.examDate;
-  const start = state.startReadiness ?? START_BASE;
+  // נקודת הפתיחה מחושבת מחדש מהנתונים של יום האבחון (ולא מערך שנשמר בנוסחה ישנה)
+  const diag = (state.sessions || []).find((x) => x.mode === 'diagnostic' && x.complete);
+  const start = diag ? Math.max(START_BASE, readiness(state.attempts.filter((a) => a.d <= diag.d))) : START_BASE;
   const from = startOf(state);
   const total = Math.max(1, dayDiff(from, exam));
   const elapsed = Math.min(total, Math.max(0, dayDiff(from, today)));
@@ -175,7 +204,8 @@ export function buildWeekly(day) {
 }
 
 export function buildErrors(state, max = 10) {
-  return openErrors(state).slice(0, max).map((e) => ({ topic: e.topic, sub: e.sub, seed: e.seed, ref: e.ref, retry: true }));
+  // qid נשמר כדי ששאלה ישנה תיבנה מחדש בגרסת המחולל שבה נוצרה
+  return openErrors(state).slice(0, max).map((e) => ({ topic: e.topic, sub: e.sub, seed: e.seed, ref: e.ref, qid: e.qid, retry: true }));
 }
 
 export function openErrors(state) {

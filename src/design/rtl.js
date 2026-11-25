@@ -36,6 +36,16 @@ export function ltr(value) {
   return LRI + String(value) + PDI;
 }
 
+// ביטויים מספריים בתוך טקסט עברי — רשימות ("‎+8, ‎+6", "70, 76") ותרגילים ("5×12 = 60",
+// "4k : (8k+8) = 5:12", "1/3 + 1/6") — מבודדים כ־LTR, אחרת בכיוון מימין לשמאל הסדר שלהם
+// מתהפך על המסך. ביטוי מתחיל בספרה (או סוגר/סימן) ונגמר בספרה, ולא כולל אותיות עבריות.
+const EXPR = /\u200e?[-+\u2212]?[\d(][\d\s.,+\-\u2212\u00d7\u00f7=:/()kx%\u200e\u00b2\u00b3\u2026]*[\d)%\u00b2\u00b3]/g;
+const HAS_OP = /\d\s*[,+\-\u2212\u00d7\u00f7=:/]\s*[\d(\u200ekx+\-\u2212]|[)k]\s*[+\-\u2212\u00d7=:]/;
+export function isoNums(text) {
+  if (!text) return text;
+  return String(text).replace(EXPR, (m) => (HAS_OP.test(m) ? LRI + m + PDI : m));
+}
+
 // טקסט שכיוונו נקבע לפי התו החזק הראשון (שם קובץ, כתובת, שם באנגלית).
 export function isolate(value) {
   if (value === null || value === undefined) return '';

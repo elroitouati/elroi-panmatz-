@@ -1,30 +1,64 @@
-// נקודת כניסה אחת: makeQuestion({ topic, sub, seed }) → שאלה שלמה.
+// נקודת כניסה אחת: makeQuestion({ topic, sub, seed, ref, v }) → שאלה שלמה.
 // אותו seed = אותה שאלה בדיוק (חזרה ממחברת הטעויות, סימולציה שנשמרה).
+//
+// גרסאות: v2 = המחוללים הקשים בפורמט של תיל (ברירת המחדל לכל שאלה חדשה).
+// v1 = המחוללים הקודמים — רק כדי ששאלה ישנה (טעות שנשמרה, מבחן קודם) תיבנה
+// מחדש בדיוק כמו שהייתה. שאלה ישנה מזוהה לפי המזהה שלה (בלי ‎":v2"‎ בסוף).
 import { seriesQuestion } from './series';
 import { arithmeticQuestion } from './arithmetic';
 import { chartsQuestion } from './charts';
 import { figuresQuestion } from './figures';
 import { logicQuestion } from './logic';
+import { technicalQuestion } from './technical';
+import { seriesQuestion as series1 } from './v1/series';
+import { arithmeticQuestion as arithmetic1 } from './v1/arithmetic';
+import { chartsQuestion as charts1 } from './v1/charts';
+import { figuresQuestion as figures1 } from './v1/figures';
+import { logicQuestion as logic1 } from './v1/logic';
+import { technicalQuestion as technical1 } from './v1/technical';
 import { vocabQuestion } from './vocab';
 import { analogiesQuestion } from './analogies';
-import { technicalQuestion } from './technical';
+
+export const GEN_VERSION = 2;
 
 const GEN = {
-  vocab: (s, sub, ref) => vocabQuestion(s, sub, ref),
-  analogies: (s, sub, ref) => analogiesQuestion(s, sub, ref),
-  series: (s, sub) => seriesQuestion(s, sub),
-  arithmetic: (s, sub) => arithmeticQuestion(s, sub),
-  figures: (s, sub) => figuresQuestion(s, sub),
-  logic: (s, sub) => logicQuestion(s, sub),
-  technical: (s, sub, ref) => technicalQuestion(s, sub, ref),
-  charts: (s, sub) => chartsQuestion(s, sub),
+  2: {
+    vocab: (s, sub, ref) => vocabQuestion(s, sub, ref, true),
+    analogies: (s, sub, ref) => analogiesQuestion(s, sub, ref),
+    series: (s, sub) => seriesQuestion(s, sub),
+    arithmetic: (s, sub) => arithmeticQuestion(s, sub),
+    figures: (s, sub) => figuresQuestion(s, sub),
+    logic: (s, sub) => logicQuestion(s, sub),
+    technical: (s, sub, ref) => technicalQuestion(s, sub, ref),
+    charts: (s, sub) => chartsQuestion(s, sub),
+  },
+  1: {
+    vocab: (s, sub, ref) => vocabQuestion(s, sub, ref),
+    analogies: (s, sub, ref) => analogiesQuestion(s, sub, ref),
+    series: (s, sub) => series1(s, sub),
+    arithmetic: (s, sub) => arithmetic1(s, sub),
+    figures: (s, sub) => figures1(s, sub),
+    logic: (s, sub) => logic1(s, sub),
+    technical: (s, sub, ref) => technical1(s, sub, ref),
+    charts: (s, sub) => charts1(s, sub),
+  },
 };
 
+// גרסת השאלה: מפורשת (v), או לפי המזהה השמור (qid ישן בלי ‎:v2‎ = גרסה 1), או החדשה
+export function versionOf(it) {
+  if (it.v) return it.v;
+  if (it.qid) return /:v2$/.test(it.qid) ? 2 : 1;
+  return GEN_VERSION;
+}
+
 // ref = מזהה פריט קבוע (מילה / אנלוגיה / שאלה טכנית) כשרוצים בדיוק אותו פריט
-export function makeQuestion({ topic, sub, seed, ref }) {
-  const q = GEN[topic](seed >>> 0, sub, ref);
+export function makeQuestion(it) {
+  const { topic, sub, seed, ref } = it;
+  const v = versionOf(it);
+  const q = GEN[v][topic](seed >>> 0, sub, ref);
   q.ref = ref || q.wordId || q.itemId || null;
+  q.v = v;
   // המזהה נבנה מהערכים שנבחרו בפועל — זהה בין יצירה ראשונה לשחזור
-  q.id = `${topic}:${q.sub}:${seed >>> 0}:${q.ref || ''}`;
+  q.id = `${topic}:${q.sub}:${seed >>> 0}:${q.ref || ''}${v === 2 ? ':v2' : ''}`;
   return q;
 }

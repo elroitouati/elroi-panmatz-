@@ -6,6 +6,7 @@ import { useX, font, Kbd } from '../ui';
 import { TOPIC } from '../topics';
 import { Matrix, FigureCell, Sequence, ChartView, TechDiagram } from './Visuals';
 import { haptic } from '../../design/haptics';
+import { ltr, isoNums } from '../../design/rtl';
 
 // ============================================================================
 //  שאלה אחת: גוף לפי סוג (סדרה / מילה / זוג / מטריצה / תרשים / טקסט)
@@ -24,7 +25,8 @@ export default function QuestionView({ q, chosen, onChoose, reveal, width = 340,
   const body = (() => {
     switch (q.kind) {
       case 'series':
-        return <Sequence items={[...q.seq.map(String), '?']} width={colW} />;
+        // גרסה 2: שני מקומות ריקים בסוף, כמו במבחן של תיל
+        return <Sequence items={[...q.seq.map(String), ...Array(q.blanks || 1).fill('?')]} width={colW} />;
       case 'word':
         return (
           <View style={{ backgroundColor: c.surface, borderRadius: 22, paddingVertical: 30, alignItems: 'center' }}>
@@ -65,8 +67,8 @@ export default function QuestionView({ q, chosen, onChoose, reveal, width = 340,
   const head = (
     <View style={wide ? { flex: 1 } : null}>
       <Text style={[t.sub, { fontFamily: font.m, fontSize: 16, marginBottom: 10 }]}>{TOPIC[q.topic].name}</Text>
-      {longText ? <Text style={[t.lead, { fontFamily: font.b, fontSize: 20, lineHeight: 30, marginBottom: 16 }]}>{q.prompt}</Text> : (
-        <Text style={[t.lead, { fontFamily: font.b, fontSize: 22, lineHeight: 30, marginBottom: 16 }]}>{q.prompt}</Text>
+      {longText ? <Text style={[t.lead, { fontFamily: font.b, fontSize: 20, lineHeight: 30, marginBottom: 16 }]}>{isoNums(q.prompt)}</Text> : (
+        <Text style={[t.lead, { fontFamily: font.b, fontSize: 22, lineHeight: 30, marginBottom: 16 }]}>{isoNums(q.prompt)}</Text>
       )}
       {body ? <View style={{ marginBottom: 20 }}>{body}</View> : null}
     </View>
@@ -99,7 +101,7 @@ export default function QuestionView({ q, chosen, onChoose, reveal, width = 340,
                 <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: L.kbg, alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ fontFamily: font.b, fontSize: 16, color: L.kfg }}>{LETTERS[i]}</Text>
                 </View>
-                <Text style={[t.body, { flex: 1, fontFamily: font.m, fontSize: 19, lineHeight: 26, fontVariant: ['tabular-nums'] }]}>{String(o)}</Text>
+                <Text style={[t.body, { flex: 1, fontFamily: font.m, fontSize: 19, lineHeight: 26, fontVariant: ['tabular-nums'] }]}>{q.kind === 'series' ? ltr(String(o)) : String(o)}</Text>
                 {st === 'ok' ? <Ionicons name="checkmark-circle" size={24} color={c.ok} /> : st === 'bad' ? <Ionicons name="close-circle" size={24} color={c.bad} /> : <Kbd k={i + 1} />}
               </Press>
             );
@@ -120,7 +122,7 @@ export function Explain({ q, ok }) {
         <Ionicons name={ok ? 'checkmark-circle' : 'information-circle'} size={22} color={ok ? c.ok : c.bad} />
         <Text style={[t.strong, { color: ok ? c.ok : c.bad }]}>{ok ? 'נכון' : `התשובה הנכונה: ${LETTERS[q.answer]}`}</Text>
       </View>
-      <Text style={t.body}>{q.explain}</Text>
+      <Text style={t.body}>{isoNums(q.explain)}</Text>
     </View>
   );
 }

@@ -67,6 +67,63 @@ export function FigureCell({ cell, size = 72, color }) {
         {shape({ fill: 'none', stroke: ink, strokeWidth: sw, strokeLinejoin: 'round' })}
       </G>
     );
+  } else if (cell.t === 'grid') {
+    // רשת 3×3: משבצות שחורות לפי האינדקסים (שורה אחרי שורה, משמאל לימין)
+    body = (
+      <G>
+        {Array.from({ length: 9 }, (_, i) => (
+          <Rect key={i} x={17 + (i % 3) * 22} y={17 + Math.floor(i / 3) * 22} width="22" height="22" fill={cell.s.includes(i) ? ink : 'none'} stroke={ink} strokeWidth="2.5" />
+        ))}
+      </G>
+    );
+  } else if (cell.t === 'hands') {
+    // שני מחוגים: ארוך עם נקודה בקצה, וקצר ועבה
+    const [ax, ay] = P(50, 50, 36, cell.a), [bx, by] = P(50, 50, 22, cell.b);
+    body = (
+      <G>
+        <Circle cx="50" cy="50" r="44" fill="none" stroke={c.mist} strokeWidth="2.5" />
+        <Line x1="50" y1="50" x2={ax} y2={ay} stroke={ink} strokeWidth="4" strokeLinecap="round" />
+        <Circle cx={ax} cy={ay} r="6" fill={ink} />
+        <Line x1="50" y1="50" x2={bx} y2={by} stroke={ink} strokeWidth="8" strokeLinecap="round" />
+        <Circle cx="50" cy="50" r="4.5" fill={c.surface} stroke={ink} strokeWidth="2" />
+      </G>
+    );
+  } else if (cell.t === 'multi') {
+    // 1–3 צורות בשורה; חצי מילוי = החצי השמאלי (חצי שטח גם במשולש)
+    const sz = 22, gap = 30, x0 = 50 - ((cell.n - 1) * gap) / 2;
+    body = (
+      <G>
+        <Defs>
+          {Array.from({ length: cell.n }, (_, i) => (
+            <ClipPath key={i} id={`${id}h${i}`}><Rect x={x0 + i * gap - sz} y="0" width={sz} height="100" /></ClipPath>
+          ))}
+        </Defs>
+        {Array.from({ length: cell.n }, (_, i) => {
+          const x = x0 + i * gap, y = 50, h = sz / 2;
+          const shape = (props) => cell.k === 'circle' ? <Circle cx={x} cy={y} r={h} {...props} />
+            : cell.k === 'square' ? <Rect x={x - h} y={y - h} width={sz} height={sz} {...props} />
+            : <Polygon points={`${x},${y - h} ${x + h},${y + h} ${x - h},${y + h}`} {...props} />;
+          return (
+            <G key={i}>
+              {cell.f === 'full' ? shape({ fill: ink }) : null}
+              {cell.f === 'half' ? <G clipPath={`url(#${id}h${i})`}>{shape({ fill: ink })}</G> : null}
+              {shape({ fill: 'none', stroke: ink, strokeWidth: 3.5, strokeLinejoin: 'round' })}
+            </G>
+          );
+        })}
+      </G>
+    );
+  } else if (cell.t === 'move') {
+    // שמונה עמדות על שפת ריבוע (מלמעלה באמצע, עם כיוון השעון): עיגול שחור ועיגול ריק
+    const pts = [[50, 14], [86, 14], [86, 50], [86, 86], [50, 86], [14, 86], [14, 50], [14, 14]];
+    body = (
+      <G>
+        <Rect x="14" y="14" width="72" height="72" fill="none" stroke={c.steel} strokeWidth="2.5" />
+        {pts.map(([x, y], i) => <Circle key={i} cx={x} cy={y} r="2.4" fill={c.steel} />)}
+        <Circle cx={pts[cell.a][0]} cy={pts[cell.a][1]} r="9.5" fill={ink} />
+        <Circle cx={pts[cell.b][0]} cy={pts[cell.b][1]} r="8" fill={c.surface} stroke={ink} strokeWidth="3.5" />
+      </G>
+    );
   }
   return <Svg width={size} height={size} viewBox="0 0 100 100">{body}</Svg>;
 }
@@ -74,13 +131,21 @@ export function FigureCell({ cell, size = 72, color }) {
 export function Matrix({ cells, width = 300 }) {
   const { c } = useX();
   const cellW = width / 3;
+  // קוראים משמאל לימין, כמו במבחן של תיל: התא הראשון למעלה משמאל, החסר — למטה מימין.
+  // כל שורה נבנית בכיוון LTR מפורש, כדי שגם ממשק מימין לשמאל לא יהפוך אותה.
   return (
-    // בכיוון קריאה עברי: התא הראשון מימין, החסר — למטה משמאל
-    <View style={{ width, alignSelf: 'center', backgroundColor: c.surface, borderRadius: 22, overflow: 'hidden', flexDirection: 'row', flexWrap: 'wrap' }}>
-      {Array.from({ length: 9 }, (_, i) => (
-        <View key={i} style={{ width: cellW, height: cellW, alignItems: 'center', justifyContent: 'center',
-          borderColor: c.mist, borderTopWidth: i >= 3 ? 1 : 0, borderStartWidth: i % 3 !== 0 ? 1 : 0 }}>
-          {i < 8 ? <FigureCell cell={cells[i]} size={cellW * 0.78} /> : <Text style={{ fontFamily: font.h, fontSize: 34, color: c.steel }}>?</Text>}
+    <View style={{ width, alignSelf: 'center', backgroundColor: c.surface, borderRadius: 22, overflow: 'hidden' }}>
+      {[0, 1, 2].map((row) => (
+        <View key={row} style={{ flexDirection: LTR_ROW }}>
+          {[0, 1, 2].map((col) => {
+            const i = row * 3 + col;
+            return (
+              <View key={col} style={{ width: cellW, height: cellW, alignItems: 'center', justifyContent: 'center',
+                borderColor: c.mist, borderTopWidth: row ? 1 : 0, ...(col ? (IS_RTL ? { borderEndWidth: 1 } : { borderLeftWidth: 1 }) : null) }}>
+                {i < 8 ? <FigureCell cell={cells[i]} size={cellW * 0.78} /> : <Text style={{ fontFamily: font.h, fontSize: 34, color: c.steel }}>?</Text>}
+              </View>
+            );
+          })}
         </View>
       ))}
     </View>
@@ -92,18 +157,23 @@ export function Sequence({ items, notes, big = true, width = 340 }) {
   // גודל הספרות מותאם לאורך הסדרה — הסדרה תמיד בשורה אחת, בלי שבירה
   const n = items.length;
   const maxLen = Math.max(2, ...items.map((x) => String(x).length));
-  const fs = Math.max(17, Math.min(big ? 28 : 24, Math.floor((width - 24 - n * 12) / (n * maxLen * 0.6))));
+  const mh = n > 8 ? 3 : n > 6 ? 4 : 6;
+  const fs = Math.max(13, Math.min(big ? 28 : 24, Math.floor((width - 24 - n * (2 * mh + 2)) / (n * maxLen * 0.62))));
   return (
     <View style={{ backgroundColor: c.surface, borderRadius: 22, paddingVertical: 26, paddingHorizontal: 10 }}>
-      <View style={{ flexDirection: LTR_ROW, justifyContent: 'center', alignItems: 'flex-end' }}>
+      <View style={{ flexDirection: LTR_ROW, justifyContent: 'center', alignItems: 'flex-end', flexWrap: 'wrap', rowGap: 10 }}>
         {items.map((it, i) => {
           const q = it === '?' || it === '_';
           return (
-            <View key={i} style={{ alignItems: 'center', marginHorizontal: n > 6 ? 4 : 6 }}>
+            <View key={i} style={{ alignItems: 'center', marginHorizontal: mh }}>
               {q ? (
                 <View style={{ width: fs * 1.2, height: fs * 1.2, borderBottomWidth: 3, borderColor: c.deep }} />
               ) : (
-                <Text style={{ fontFamily: font.b, fontSize: fs, lineHeight: Math.round(fs * 1.22), color: c.ink, fontVariant: ['tabular-nums'] }}>{it}</Text>
+                <Text style={{ fontFamily: font.b, fontSize: fs, lineHeight: Math.round(fs * 1.22), color: c.ink, fontVariant: ['tabular-nums'] }}>
+                  {it}
+                  {/* פסיק בין המספרים, כמו במבחן — בלי פסיק "5 6 12" נקרא כמספר אחד */}
+                  {i < n - 1 ? <Text style={{ color: c.steel }}>,</Text> : null}
+                </Text>
               )}
             </View>
           );
@@ -121,6 +191,51 @@ export function Sequence({ items, notes, big = true, width = 340 }) {
 }
 
 export function ChartView({ chart, width = 320, height = 220 }) {
+  if (chart.type === 'bars2') return <Bars2 chart={chart} width={width} height={height} />;
+  return <SimpleChart chart={chart} width={width} height={height} />;
+}
+
+// שתי סדרות זו לצד זו. סדר עברי: התקופה הראשונה מימין. סדרה א׳ מלאה, סדרה ב׳ בהירה עם מסגרת.
+function Bars2({ chart, width, height }) {
+  const { c } = useX();
+  const { values: [A, B], labels, title, step, series } = chart;
+  const max = Math.ceil((Math.max(...A, ...B) + step) / step) * step;
+  const L = 40, R = 8, T = 12, Bm = 30;
+  const w = width - L - R, h = height - T - Bm;
+  const n = labels.length, grp = w / n, bw = grp * 0.32;
+  const gx = (i) => width - R - grp * (i + 0.5);
+  const y = (v) => T + h - (v / max) * h;
+  const ticks = [];
+  for (let v = 0; v <= max; v += step) ticks.push(v);
+  const every = ticks.length > 8 ? 2 : 1;
+  const sw = (fill, stroke) => <View style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: fill, borderWidth: stroke ? 1.5 : 0, borderColor: stroke }} />;
+  return (
+    <View style={{ backgroundColor: c.surface, borderRadius: 22, padding: 12, alignItems: 'center' }}>
+      <Text style={{ fontFamily: font.b, fontSize: 16, color: c.ink, textAlign: 'center' }}>{title}</Text>
+      <View style={{ flexDirection: 'row', gap: 16, marginTop: 6, marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>{sw(c.deep)}<Text style={{ fontFamily: font.m, fontSize: 14, color: c.slate }}>{series[0]}</Text></View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>{sw(c.deepSoft, c.deep)}<Text style={{ fontFamily: font.m, fontSize: 14, color: c.slate }}>{series[1]}</Text></View>
+      </View>
+      <Svg width={width} height={height}>
+        {ticks.map((v, k) => (
+          <G key={v}>
+            <Line x1={L} x2={width - R} y1={y(v)} y2={y(v)} stroke={v === 0 ? c.steel : c.mist} strokeWidth={1} />
+            {k % every === 0 ? <SvgText x={L - 6} y={y(v) + 5} fontSize="12" fill={c.slate} textAnchor="end" fontFamily={font.m}>{v}</SvgText> : null}
+          </G>
+        ))}
+        {labels.map((lb, i) => (
+          <G key={i}>
+            <Rect x={gx(i)} y={y(A[i])} width={bw} height={y(0) - y(A[i])} fill={c.deep} />
+            <Rect x={gx(i) - bw} y={y(B[i])} width={bw} height={y(0) - y(B[i])} fill={c.deepSoft} stroke={c.deep} strokeWidth={1.5} />
+            <SvgText x={gx(i)} y={height - 8} fontSize="12" fill={c.slate} textAnchor="middle" fontFamily={font.m}>{lb}</SvgText>
+          </G>
+        ))}
+      </Svg>
+    </View>
+  );
+}
+
+function SimpleChart({ chart, width, height }) {
   const { c } = useX();
   const { values, labels, type, title, step } = chart;
   const max = Math.ceil((Math.max(...values) + step) / step) * step;
@@ -179,13 +294,43 @@ export function TechDiagram({ d, width = 320 }) {
               <G key={i}>
                 <Circle cx={cx} cy={cy} r={rr} fill="none" stroke={c.steel} strokeWidth={8} strokeDasharray={`${circ / teethN / 2} ${circ / teethN / 2}`} />
                 <Circle cx={cx} cy={cy} r={rr - 6} fill={c.deepSoft} stroke={c.deep} strokeWidth={2} />
-                <Circle cx={cx} cy={cy} r={4} fill={c.deep} />
-                {i === 0 ? <SvgText x={cx} y={cy + 6} fontSize="18" fontFamily={font.h} fill={c.deep} textAnchor="middle">{d.first === 'cw' ? '↻' : '↺'}</SvgText> : null}
+                {Array.isArray(d.labels) ? null : <Circle cx={cx} cy={cy} r={4} fill={c.deep} />}
+                {i === 0 && d.first ? <SvgText x={cx} y={cy - rr - 4} fontSize="20" fontFamily={font.h} fill={c.deep} textAnchor="middle">{d.first === 'cw' ? '↻' : '↺'}</SvgText> : null}
                 {i === d.ask && !d.labels ? <SvgText x={cx} y={cy + 7} fontSize="20" fontFamily={font.h} fill={c.deep} textAnchor="middle">?</SvgText> : null}
-                {d.labels ? <SvgText x={cx} y={cy + 6} fontSize="16" fontFamily={font.b} fill={c.deep} textAnchor="middle">{i === 0 ? 'א׳' : 'ב׳'}</SvgText> : null}
+                {d.labels ? <SvgText x={cx} y={cy + 6} fontSize={Math.max(11, Math.min(16, rr * 0.5))} fontFamily={font.b} fill={c.deep} textAnchor="middle">{Array.isArray(d.labels) ? d.labels[i] : i === 0 ? 'א׳' : 'ב׳'}</SvgText> : null}
               </G>
             );
           })}
+        </Svg>
+      </View>
+    );
+  }
+  if (d.type === 'lever2') {
+    // מוט עם שני משקלים מימין למשען, וסימן שאלה משמאל
+    const H = 150, mid = width / 2, beamY = 84;
+    const maxD = Math.max(d.left, ...d.right.map((x) => x[1]));
+    const unit = (width / 2 - 34) / maxD;
+    const bw = Math.min(44, unit * 0.9); // תיבות צרות כשהמשקלים קרובים — שלא יעלו זו על זו
+    const box = (x, label, dashed) => (
+      <G>
+        <Rect x={x - bw / 2} y={beamY - 44} width={bw} height={40} rx={6} fill={dashed ? 'none' : c.deep} stroke={c.deep} strokeWidth={dashed ? 2.5 : 0} strokeDasharray={dashed ? '6 4' : undefined} />
+        <SvgText x={x} y={beamY - (dashed ? 16 : 19)} fontSize={dashed ? 20 : 13} fontFamily={dashed ? font.h : font.b} fill={dashed ? c.deep : c.onDeep} textAnchor="middle">{label}</SvgText>
+      </G>
+    );
+    return (
+      <View style={{ backgroundColor: c.surface, borderRadius: 22, paddingVertical: 10, alignItems: 'center' }}>
+        <Svg width={width} height={H}>
+          <Line x1={16} x2={width - 16} y1={beamY} y2={beamY} stroke={c.ink} strokeWidth={6} strokeLinecap="round" />
+          <Polygon points={`${mid},${beamY + 3} ${mid - 17},${beamY + 34} ${mid + 17},${beamY + 34}`} fill={c.steel} />
+          {d.right.map(([w, dist], i) => (
+            <G key={i}>
+              {box(mid + dist * unit, String(w))}
+              <SvgText x={mid + dist * unit} y={beamY + 54} fontSize="13" fontFamily={font.m} fill={c.slate} textAnchor="middle">{`${dist} מ׳`}</SvgText>
+            </G>
+          ))}
+          {box(mid - d.left * unit, '?', true)}
+          <SvgText x={width * 0.8} y={beamY - 52} fontSize="12" fontFamily={font.m} fill={c.slate} textAnchor="middle">משקלים בק״ג</SvgText>
+          <SvgText x={mid - d.left * unit} y={beamY + 54} fontSize="13" fontFamily={font.m} fill={c.slate} textAnchor="middle">{`${d.left} מ׳`}</SvgText>
         </Svg>
       </View>
     );

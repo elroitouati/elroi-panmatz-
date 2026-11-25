@@ -6,7 +6,6 @@ import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { makeHard } from './hard.mjs';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
 const outDir = path.resolve(process.argv[2] || path.join(root, 'dist-booklet'));
@@ -33,8 +32,30 @@ const { ANALOGIES } = await imp('data/analogies.js');
 const { TECH_CONCEPTS } = await imp('data/technical.js');
 const { TOPIC } = await imp('topics.js');
 
-const build = makeHard({ makeRng, withDistractors, WORDS, ANALOGIES, TECH_CONCEPTS });
-const sections = build(SEED);
+const { makeQuestion } = await imp('gen/index.js');
+const { TOPICS } = await imp('topics.js');
+void makeRng; void withDistractors; void WORDS; void ANALOGIES; void TECH_CONCEPTS;
+
+// החוברת משתמשת באותם מחוללים קשים של האפליקציה (גרסה 2, בפורמט של תיל):
+// 15 שאלות לכל נושא, בסבב על כל סוגי השאלות, בלי כפילויות.
+const PLAN = {
+  vocab: ['tierB', 'phrases', 'tierB'],
+  technical: ['gears', 'levers', 'pulleys', 'concepts', 'gears', 'concepts'],
+};
+function pickFor(topic) {
+  const t = TOPICS.find((x) => x.id === topic);
+  const subs = PLAN[topic] || t.subs.map(([id]) => id);
+  const out = [], seen = new Set();
+  for (let k = 0; out.length < 15 && k < 400; k++) {
+    const q = makeQuestion({ topic, sub: subs[out.length % subs.length], seed: (SEED * 31 + k * 7919 + topic.length * 104729) >>> 0 });
+    const sig = q.prompt + (q.word || '') + (q.pair || '') + (q.ref || '') + JSON.stringify(q.seq || q.matrix || q.chart || q.diagram || '');
+    if (seen.has(sig) || (q.ref && [...seen].some((x) => x.endsWith('#' + q.ref)))) continue;
+    seen.add(sig); if (q.ref) seen.add('#' + q.ref);
+    out.push(q);
+  }
+  return out;
+}
+const sections = TOPICS.map((t) => ({ topic: t.id, qs: pickFor(t.id) }));
 
 // ---- בדיקות תקינות: 4 תשובות שונות, תשובה נכונה אחת, 15 בכל פרק ----
 const errs = [];
@@ -98,7 +119,7 @@ function cellSvg(c, size = 74) {
 }
 
 function matrixHtml(cells) {
-  return `<div class="matrix">${Array.from({ length: 9 }, (_, i) => `<div class="mc">${i < 8 ? cellSvg(cells[i], 52) : '<span class="qm">?</span>'}</div>`).join('')}</div>`;
+  return `<div class="matrix" dir="ltr">${Array.from({ length: 9 }, (_, i) => `<div class="mc">${i < 8 ? cellSvg(cells[i], 52) : '<span class="qm">?</span>'}</div>`).join('')}</div>`;
 }
 
 function chartSvg(ch) {
@@ -204,7 +225,11 @@ function techSvg(d) {
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const ltr = (s) => `<bdi dir="ltr">${esc(s)}</bdi>`;
 const isNumeric = (s) => /^[-−]?\d/.test(String(s));
-const optText = (o) => (isNumeric(o) ? ltr(o) : esc(o));
+const optText = (o) => (isNumeric(o) ? ltr(o) : iso(o));
+// ביטויים מספריים בתוך טקסט עברי ("6+8+10 = 24", "70, 76") — מבודדים כ־LTR, כמו באפליקציה
+const EXPR = /\u200e?[-+\u2212]?[\d(][\d\s.,+\-\u2212\u00d7\u00f7=:/()kx%\u200e\u00b2\u00b3\u2026]*[\d)%\u00b2\u00b3]/g;
+const HAS_OP = /\d\s*[,+\-\u2212\u00d7\u00f7=:/]\s*[\d(\u200ekx+\-\u2212]|[)k]\s*[+\-\u2212\u00d7=:]/;
+function iso(t) { return esc(t).replace(EXPR, (m) => (HAS_OP.test(m) ? `<bdi dir="ltr">${m}</bdi>` : m)); }
 
 const MINUTES = { vocab: 7, analogies: 8, series: 12, arithmetic: 25, figures: 20, logic: 30, technical: 15, charts: 25 };
 const TIPS = {
@@ -219,28 +244,29 @@ const TIPS = {
 };
 const TWO_COL = new Set(['vocab', 'analogies', 'series']);
 
+const LET = ['א', 'ב', 'ג', 'ד'];
 let num = 0;
 const key = [];
 function qHtml(q, topic) {
   num++;
-  key.push({ n: num, topic, a: q.answer + 1, explain: q.explain, correct: q.options[q.answer] });
-  const head = `<div class="qh"><span class="qn">${num}</span><div class="qp">${esc(q.prompt).replace(/\n/g, '<br>')}</div></div>`;
+  key.push({ n: num, topic, a: LET[q.answer], explain: q.explain, correct: q.options[q.answer] });
+  const head = `<div class="qh"><span class="qn">${num}</span><div class="qp">${iso(q.prompt).replace(/\n/g, '<br>')}</div></div>`;
   let body = '';
   if (q.kind === 'word') body = `<div class="word">${esc(q.word)}</div>`;
   if (q.kind === 'analogy') body = `<div class="word pair">${esc(q.pair)}</div>`;
-  if (q.kind === 'series') body = `<div class="seq" dir="ltr">${q.seq.map((x) => (x === '?' ? '<span class="blank">?</span>' : `<span>${x}</span>`)).join('<span class="sep">,</span>')}</div>`;
+  if (q.kind === 'series') body = `<div class="seq" dir="ltr">${[...q.seq, ...Array(q.blanks || 1).fill('?')].map((x) => (x === '?' ? '<span class="blank">&nbsp;</span>' : `<span>${x}</span>`)).join('<span class="sep">,</span>')}</div>`;
   if (q.kind === 'figures') body = matrixHtml(q.matrix);
   if (q.kind === 'chart') body = chartSvg(q.chart);
   if (q.kind === 'tech') body = `<div class="diag">${techSvg(q.diagram)}</div>`;
   let opts;
   if (q.kind === 'figures') {
-    opts = `<div class="fopts">${q.options.map((o, i) => `<div class="fo"><div class="fbox">${cellSvg(o, 46)}</div><span class="on">(${i + 1})</span></div>`).join('')}</div>`;
+    opts = `<div class="fopts">${q.options.map((o, i) => `<div class="fo"><div class="fbox">${cellSvg(o, 46)}</div><span class="on">${LET[i]}׳</span></div>`).join('')}</div>`;
   } else {
     const len = Math.max(...q.options.map((o) => String(o).length));
     const two = TWO_COL.has(topic);
     const side = q.kind === 'chart' || (q.kind === 'tech' && q.diagram.type === 'pulley');
     const cls = two || side ? (len > 16 || side ? 'c1' : 'c2') : len > 30 ? 'c1' : len > 13 ? 'c2' : 'c4';
-    opts = `<ol class="opts ${cls}">${q.options.map((o, i) => `<li><span class="on">(${i + 1})</span> ${optText(o)}</li>`).join('')}</ol>`;
+    opts = `<ol class="opts ${cls}">${q.options.map((o, i) => `<li><span class="on">${LET[i]}.</span> ${optText(o)}</li>`).join('')}</ol>`;
   }
   // ציור ותשובות זה לצד זה — חוסך חצי עמוד בכל שאלה עם ציור גבוה
   const sideBySide = q.kind === 'figures' || q.kind === 'chart' || (q.kind === 'tech' && q.diagram.type === 'pulley');
@@ -265,13 +291,13 @@ const totalMin = Object.values(MINUTES).reduce((a, b) => a + b, 0);
 
 // דף סימון תשובות
 const sheet = sections.map((s, si) => {
-  const rows = key.filter((k) => k.topic === s.topic).map((k) => `<div class="br"><span class="bn">${k.n}</span>${[1, 2, 3, 4].map((i) => `<span class="bub">${i}</span>`).join('')}</div>`).join('');
+  const rows = key.filter((k) => k.topic === s.topic).map((k) => `<div class="br"><span class="bn">${k.n}</span>${LET.map((l) => `<span class="bub">${l}</span>`).join('')}</div>`).join('');
   return `<div class="bs"><div class="bt">${si + 1}. ${TOPIC[s.topic].name}</div>${rows}</div>`;
 }).join('');
 
 // מפתח מהיר + הסברים
-const quick = sections.map((s) => `<div class="qk"><div class="bt">${TOPIC[s.topic].name}</div>${key.filter((k) => k.topic === s.topic).map((k) => `<span><b>${k.n}</b>&nbsp;(${k.a})</span>`).join('')}</div>`).join('');
-const expl = sections.map((s) => `<h3 class="eh">${TOPIC[s.topic].name}</h3>${key.filter((k) => k.topic === s.topic).map((k) => `<div class="ex"><span class="en">${k.n}</span><span class="ea">(${k.a})</span><span class="et">${esc(k.explain)}</span></div>`).join('')}`).join('');
+const quick = sections.map((s) => `<div class="qk"><div class="bt">${TOPIC[s.topic].name}</div>${key.filter((k) => k.topic === s.topic).map((k) => `<span><b>${k.n}</b>&nbsp;${k.a}׳</span>`).join('')}</div>`).join('');
+const expl = sections.map((s) => `<h3 class="eh">${TOPIC[s.topic].name}</h3>${key.filter((k) => k.topic === s.topic).map((k) => `<div class="ex"><span class="en">${k.n}</span><span class="ea">${k.a}׳</span><span class="et">${iso(k.explain)}</span></div>`).join('')}`).join('');
 
 const html = `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>חוברת תרגול פנמ״צ</title>
 <style>
@@ -314,9 +340,9 @@ table.plan th{font-weight:700;color:${MID};font-size:9.5pt}
 .qp{font-weight:700}
 .word{font-size:15pt;font-weight:900;margin:1.5mm 9.5mm 1mm}
 .word.pair{font-size:13pt}
-.seq{display:flex;gap:1.5mm;justify-content:flex-end;flex-wrap:wrap;font-size:14pt;font-weight:700;margin:2mm 9.5mm 1mm 0;font-variant-numeric:tabular-nums}
+.seq{display:flex;gap:1mm;justify-content:center;flex-wrap:nowrap;white-space:nowrap;font-size:12pt;font-weight:700;margin:2mm 9.5mm 1.5mm 0;font-variant-numeric:tabular-nums}
 .seq .sep{color:${MID}}
-.seq .blank{display:inline-block;min-width:11mm;border-bottom:2px solid ${INK};text-align:center;color:${MID}}
+.seq .blank{display:inline-block;min-width:9mm;border-bottom:2px solid ${INK}}
 .opts{list-style:none;padding:0;margin:1.5mm 9.5mm 0 0;display:grid;gap:1mm 5mm}
 .opts.c1{grid-template-columns:1fr}.opts.c2{grid-template-columns:1fr 1fr}.opts.c4{grid-template-columns:repeat(4,1fr)}
 .on{font-weight:700;color:${MID}}
@@ -381,7 +407,7 @@ table.plan th{font-weight:700;color:${MID};font-size:9.5pt}
 </div>
 ${sectionsHtml}
 <div class="answers"><h2>דף סימון תשובות</h2><p>סמנו עיגול אחד בכל שורה. אחרי הבדיקה — סמנו ✗ ליד כל שאלה שטעיתם בה.</p><div class="bgrid">${sheet}</div></div>
-<div class="keyp"><div class="cut">✂ — מכאן מתחיל מפתח התשובות — ✂</div><h2>מפתח תשובות</h2><p>המספר בסוגריים = התשובה הנכונה. הסברים מלאים בעמודים הבאים.</p><div class="qgrid">${quick}</div>
+<div class="keyp"><div class="cut">✂ — מכאן מתחיל מפתח התשובות — ✂</div><h2>מפתח תשובות</h2><p>האות ליד מספר השאלה = התשובה הנכונה. הסברים מלאים בעמודים הבאים.</p><div class="qgrid">${quick}</div>
 <h2>הסברים</h2>${expl}</div>
 </body></html>`;
 

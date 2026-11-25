@@ -9,7 +9,7 @@ import { useX, Btn, Bar, SectionTitle, MiniRing, font } from '../ui';
 import { useExam } from '../ExamContext';
 import { TOPIC } from '../topics';
 import { LESSONS } from '../data/lessons';
-import { statsFor } from '../engine/brain';
+import { statsFor, strengthOf } from '../engine/brain';
 
 // ============================================================================
 //  מרכז נושא: לפני הלימוד — "לימוד" ראשי ו"ישר לתרגול" משני. אחרי — הפוך.
@@ -24,7 +24,7 @@ export default function TopicHub({ navigation, route }) {
   const tp = TOPIC[topic];
   const L = LESSONS[topic] || [];
   const lesson = state.lessons[topic] || {};
-  const s = statsFor(state.attempts, topic);
+  const s = { ...statsFor(state.attempts, topic), ...strengthOf(state.attempts, topic) };
   const learned = !!lesson.done;
 
   return (
@@ -34,11 +34,11 @@ export default function TopicHub({ navigation, route }) {
         <Reveal index={0}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 4, marginBottom: 20 }}>
             <View style={{ width: 64, height: 64, alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ position: 'absolute' }}><MiniRing value={s.n ? s.mastery : 0} size={64} stroke={5} /></View>
+              <View style={{ position: 'absolute' }}><MiniRing value={s.n ? s.strength : 0} size={64} stroke={5} /></View>
               <Ionicons name={tp.icon} size={26} color={c.deep} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={t.over}>{s.n ? `שליטה ${Math.round(s.mastery * 100)}% · ${s.n} שאלות` : 'עוד לא תורגל'}</Text>
+              <Text style={t.over}>{s.n ? `חוזק ${Math.round(s.strength * 100)}% · ${s.n} שאלות · ${s.covered}/${s.subsTotal} סוגים` : 'עוד לא תורגל'}</Text>
               <Text style={t.title}>{tp.name}</Text>
             </View>
           </View>

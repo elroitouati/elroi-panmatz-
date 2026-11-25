@@ -8,7 +8,7 @@ import Page from '../components/Page';
 import { useX, Btn, Tile, MiniRing, SectionTitle, ON_FLOW, font } from '../ui';
 import { useExam } from '../ExamContext';
 import { TOPICS } from '../topics';
-import { statsFor, nextSimDate, fmtDay, buildErrors, openErrors } from '../engine/brain';
+import { statsFor, strengthOf, nextSimDate, fmtDay, buildErrors, openErrors } from '../engine/brain';
 import { dir } from '../../design/rtl';
 
 // ============================================================================
@@ -46,12 +46,12 @@ export default function ExamPractice({ navigation }) {
         <SectionTitle>לפי נושא</SectionTitle>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {TOPICS.map((tp) => {
-            const s = statsFor(state.attempts, tp.id);
+            const s = { ...statsFor(state.attempts, tp.id), ...strengthOf(state.attempts, tp.id) };
             return (
               <Press key={tp.id} wrapStyle={{ width: '48.5%' }} onPress={() => navigation.navigate('TopicHub', { topic: tp.id })} accessibilityLabel={tp.name}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: c.surface, borderRadius: 20, padding: 14, minHeight: 76 }}>
                 <View style={{ width: 42, height: 42, alignItems: 'center', justifyContent: 'center' }}>
-                  <View style={{ position: 'absolute' }}><MiniRing value={s.n ? s.mastery : 0} /></View>
+                  <View style={{ position: 'absolute' }}><MiniRing value={s.n ? s.strength : 0} /></View>
                   <Ionicons name={tp.icon} size={18} color={c.deep} />
                 </View>
                 <Text style={[t.strong, { flex: 1, fontSize: 16, lineHeight: 21 }]} numberOfLines={2}>{tp.name}</Text>
