@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Flow from '../../components/Flow';
@@ -10,6 +10,7 @@ import { useExam } from '../ExamContext';
 import { TOPICS } from '../topics';
 import { statsFor, strengthOf, nextSimDate, fmtDay, buildErrors, openErrors } from '../engine/brain';
 import { dir } from '../../design/rtl';
+import PrepSheet, { PREP, prepCount } from '../components/ExamPrep';
 
 // ============================================================================
 //  תרגול — כל מה שאפשר לבחור ידנית: סימולציה, בדיקה, נושא, טעויות.
@@ -19,6 +20,7 @@ import { dir } from '../../design/rtl';
 export default function ExamPractice({ navigation }) {
   const { c, t } = useX();
   const { state, today } = useExam();
+  const [prepOpen, setPrepOpen] = useState(false);
   if (!state) return null;
   const sim = nextSimDate(state, today);
   const errs = openErrors(state).length;
@@ -39,7 +41,9 @@ export default function ExamPractice({ navigation }) {
         <View style={{ gap: 10, marginTop: 12 }}>
           <Tile icon="clipboard-outline" title="בדיקה שבועית" sub="32 שאלות · 30 דקות בזמן אמת" onPress={() => navigation.navigate('Quiz', { mode: 'weekly' })} />
           <Tile icon="bookmark-outline" title="מחברת הטעויות" sub={errs ? 'כל שאלה חוזרת עד שעונים נכון פעמיים' : 'ריקה כרגע'} big={errs || null} onPress={() => navigation.navigate('Errors')} />
+          <Tile icon="videocam-outline" title="הכנה ליום המבחן" sub={`Zoom, מחשב, 2 דפי טיוטה · ${prepCount(state.settings)} מתוך ${PREP.length} מוכנים`} onPress={() => setPrepOpen(true)} />
         </View>
+        <PrepSheet visible={prepOpen} onClose={() => setPrepOpen(false)} />
       </Reveal>
 
       <Reveal index={2}>

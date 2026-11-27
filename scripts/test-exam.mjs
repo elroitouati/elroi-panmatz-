@@ -68,9 +68,21 @@ ok(makeQuestion({ topic: 'vocab', sub: null, seed: 5, ref: WORDS[10].id }).wordI
 // ---- גרסה 1 (שאלות ישנות שנשמרו) ממשיכה להיבנות בדיוק כמו קודם ----
 ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5, qid: 'series:add:5:' }).v === 1, 'qid ישן → מחולל v1');
 ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5, qid: 'series:add:5::v2' }).v === 2, 'qid חדש → מחולל v2');
-ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5 }).v === 2, 'שאלה חדשה → v2');
+ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5 }).v === 3, 'שאלה חדשה → v3');
+ok(makeQuestion({ topic: 'logic', sub: 'order', seed: 5, qid: 'logic:order:5::v2' }).v === 2, 'qid v2 → היגיון v2 (שאלה קשה ישנה נשמרת כמו שהייתה)');
+ok(makeQuestion({ topic: 'logic', sub: 'order', seed: 5, v: 2 }).prompt.startsWith('6 חברים'), 'היגיון v2 = 6 אנשים');
 ok(makeQuestion({ topic: 'series', sub: 'add', seed: 5, v: 1 }).id === 'series:add:5:', 'מזהה v1 לא השתנה');
-ok(/:v2$/.test(makeQuestion({ topic: 'logic', sub: 'order', seed: 5 }).id), 'מזהה v2 מסומן');
+ok(/:v3$/.test(makeQuestion({ topic: 'logic', sub: 'order', seed: 5 }).id), 'מזהה v3 מסומן');
+// היגיון v3 ברמת המבחן: 4–5 פריטים ולכל היותר 5 רמזים
+{
+  let big = 0;
+  for (let s = 1; s < 300; s++) {
+    const q = makeQuestion({ topic: 'logic', sub: 'order', seed: s });
+    const clues = (q.prompt.match(/•/g) || []).length;
+    if (!/^(4|5) /.test(q.prompt.replace('במרכז מסחרי יש ', '')) || clues > 5 || clues < 2) big++;
+  }
+  ok(big === 0, `היגיון ברמת המבחן (${big})`);
+}
 for (const t of TOPICS) {
   let bad = 0;
   for (let s = 1; s <= 60; s++) {
@@ -251,6 +263,15 @@ ok(gram === 0, `logic grammar (${gram})`);
   const many = TOPICS.flatMap((t) => t.subs.flatMap(([sub]) => Array.from({ length: 40 }, () => ({ topic: t.id, sub, ok: true, ms: 5000, mode: 'daily', d: '2026-12-01' }))));
   ok(brain.readiness(many) > 0.85, `הכול נכון בכל הסוגים → מוכנות גבוהה (${brain.readiness(many).toFixed(2)})`);
   ok(brain.readinessConfidence(few).solid === false && brain.readinessConfidence(many).solid === true, 'ביטחון במדד');
+}
+
+// ---- דוח מצב ----
+{
+  const S0 = { ...base, attempts: [{ topic: 'logic', sub: 'order', ok: false, ms: 90000, mode: 'weekly', d: '2026-11-26' }, { topic: 'vocab', sub: 'tierB', ok: true, ms: 8000, mode: 'daily', d: '2026-11-26' }],
+    sessions: [{ mode: 'weekly', complete: true, d: '2026-11-26', n: 2, correct: 1, durationMs: 600000, items: [{ topic: 'logic', ok: false }, { topic: 'vocab', ok: true }] }],
+    errors: { q1: { topic: 'logic', reason: 'time' } } };
+  const rep = brain.statusReport(S0, '2026-11-27');
+  ok(/דוח מצב/.test(rep) && /שאלות היגיון/.test(rep) && /בדיקה שבועית: 1\/2/.test(rep) && /לחץ זמן 1/.test(rep) && !/NaN|undefined/.test(rep), 'דוח מצב תקין');
 }
 
 // ---- סימולציה של 70 ימי שימוש ----

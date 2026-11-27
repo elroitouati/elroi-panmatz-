@@ -169,6 +169,18 @@ export default function Sim({ navigation, route }) {
             </Text>
             <Btn variant="flow" label={sim.secElapsed ? 'להמשיך בפרק' : 'התחל פרק'} icon="play" onPress={begin} style={{ marginTop: 20 }} />
           </Flow>
+          {sim.section === 0 && !sim.secElapsed ? (
+            // תנאי המבחן של תיל: במחשב, שני דפי טיוטה ריקים, בלי טלפון ובלי עוד לשוניות
+            <View style={{ backgroundColor: c.surface, borderRadius: 22, padding: 16, marginTop: 14, gap: 8 }}>
+              <Text style={t.strong}>כמו ביום המבחן</Text>
+              {['במחשב, לא בטלפון — המבחן עצמו רק במחשב', 'שני דפי טיוטה ריקים ועט — לא יותר', 'הטלפון כבוי ומחוץ לחדר', 'חדר סגור, ובדפדפן רק הלשונית הזאת'].map((x) => (
+                <View key={x} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                  <Ionicons name="checkmark" size={18} color={c.deep} style={{ marginTop: 3 }} />
+                  <Text style={[t.body, { flex: 1 }]}>{x}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
           <View style={{ backgroundColor: c.surface, borderRadius: 22, paddingVertical: 6, marginTop: 14 }}>
             {SIM_SECTIONS.map((s, i) => {
               const m = sim.meta[i];

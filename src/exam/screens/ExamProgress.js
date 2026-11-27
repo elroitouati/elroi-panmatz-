@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Share, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Flow from '../../components/Flow';
 import Press from '../../components/Press';
@@ -7,7 +7,7 @@ import Reveal from '../../components/Reveal';
 import Page from '../components/Page';
 import { useX, Bar, Tile, SectionTitle, ON_FLOW, font } from '../ui';
 import { useExam } from '../ExamContext';
-import { pace, PACE_LABEL, topicTable, decisions, openErrors, fmtDay, TARGET, readinessConfidence, examCountdown } from '../engine/brain';
+import { pace, PACE_LABEL, topicTable, decisions, openErrors, fmtDay, TARGET, readinessConfidence, examCountdown, statusReport } from '../engine/brain';
 import { dir } from '../../design/rtl';
 
 // ============================================================================
@@ -20,6 +20,7 @@ const MODE_NAME = { weekly: 'בדיקה שבועית', sim: 'סימולציה', 
 export default function ExamProgress({ navigation }) {
   const { c, t } = useX();
   const { state, today } = useExam();
+  const [copied, setCopied] = useState(false);
   if (!state) return null;
   const p = pace(state, today);
   const table = topicTable(state.attempts);
@@ -27,6 +28,14 @@ export default function ExamProgress({ navigation }) {
   const errs = openErrors(state).length;
   const tests = state.sessions.filter((s) => MODE_NAME[s.mode] && s.complete).slice(-8).reverse();
   const has = state.attempts.length > 0;
+  const shareReport = async () => {
+    const text = statusReport(state, today);
+    // במחשב — העתקה ללוח; בטלפון — תפריט השיתוף (וואטסאפ, העתקה וכו')
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      try { await navigator.clipboard.writeText(text); setCopied(true); return; } catch (e) { /* ננסה שיתוף */ }
+    }
+    try { await Share.share({ message: text }); } catch (e) { /* בוטל */ }
+  };
   const conf = readinessConfidence(state.attempts);
   const pct = has ? Math.round(p.now * 100) : null;
   const chipColor = p.status === 'behind' ? { bg: 'rgba(229,138,130,0.25)', fg: '#FFD5D0' } : { bg: 'rgba(93,187,141,0.22)', fg: '#BDF0D5' };
@@ -104,8 +113,9 @@ export default function ExamProgress({ navigation }) {
       </Reveal>
 
       <Reveal index={3}>
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: 12, gap: 10 }}>
           <Tile icon="bookmark-outline" title="מחברת הטעויות" sub="כל טעות עם הסבר וסיבה" big={errs || null} onPress={() => navigation.navigate('Errors')} />
+          <Tile icon="document-text-outline" title={copied ? 'הדוח הועתק' : 'דוח מצב'} sub="סיכום כל הנתונים — לשלוח או להדביק לניתוח" onPress={shareReport} />
         </View>
         {tests.length ? (
           <>

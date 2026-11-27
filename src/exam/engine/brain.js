@@ -500,3 +500,51 @@ export function examMonthStats(state, keys, today) {
   }
   return { done, due };
 }
+
+// ---------------------------------------------------------------------------
+//  דוח מצב — טקסט קצר להעתקה (למשל כדי לשלוח לניתוח). רק מספרים, בלי פרטים אישיים.
+// ---------------------------------------------------------------------------
+const MODE_HE = { weekly: 'בדיקה שבועית', sim: 'סימולציה', diagnostic: 'אבחון', daily: 'תרגול', topic: 'תרגול נושא', errors: 'טעויות' };
+const REASON_HE = { rule: 'לא ידעתי את החוק', calc: 'טעות בחישוב', read: 'קראתי לא נכון', time: 'לחץ זמן', guess: 'ניחשתי' };
+
+export function statusReport(state, today) {
+  const A = state.attempts.filter((a) => a.mode !== 'lesson');
+  const p = pace(state, today);
+  const conf = readinessConfidence(state.attempts);
+  const pct = (x) => `${Math.round(x * 100)}%`;
+  const L = [];
+  L.push(`דוח מצב — ${today}`);
+  L.push(`${examCountdown(state, today).replace(/[⁦-⁩]/g, '')}`);
+  L.push(`מוכנות: ${pct(p.now)} (קצב מצפה ל־${pct(p.expected)}) · ${A.length} שאלות${conf.solid ? '' : ' · הערכה ראשונית'}`);
+  L.push('');
+  L.push('נושא | חוזק | שאלות | דיוק ב־20 אחרונות | זמן ממוצע לתשובה נכונה / יעד');
+  for (const t of TOPICS) {
+    const s = statsFor(A, t.id);
+    const st = strengthOf(A, t.id);
+    L.push(`${t.name} | ${pct(st.strength)} | ${s.n} | ${s.n ? pct(s.recentAcc) : '—'} | ${s.avgMs ? Math.round(s.avgMs / 1000) + 'ש׳' : '—'} / ${Math.round(s.budget / 1000)}ש׳`);
+    const subs = t.subs.map(([id, name]) => ({ name, s: statsFor(A, t.id, id) })).filter((x) => x.s.n);
+    if (subs.length) L.push('   ' + subs.map((x) => `${x.name} ${x.s.n}ש׳/${pct(x.s.recentAcc)}`).join(' · ').replace(/ש׳\//g, ' שאלות, '));
+  }
+  const tests = (state.sessions || []).filter((s) => ['weekly', 'sim', 'diagnostic'].includes(s.mode) && s.complete);
+  if (tests.length) {
+    L.push('');
+    L.push('בדיקות:');
+    for (const s of tests) {
+      const byT = {};
+      (s.items || []).forEach((it) => { const b = (byT[it.topic] = byT[it.topic] || [0, 0]); b[1]++; if (it.ok) b[0]++; });
+      const per = Object.entries(byT).map(([k, [ok, n]]) => `${TOPIC[k]?.short || k} ${ok}/${n}`).join(', ');
+      L.push(`${s.d} ${MODE_HE[s.mode]}: ${s.correct}/${s.n} (${pct(s.correct / Math.max(1, s.n))}), ${Math.round((s.durationMs || 0) / 60000)} דק׳ — ${per}`);
+    }
+  }
+  const errs = Object.values(state.errors || {});
+  if (errs.length) {
+    const rs = {};
+    errs.forEach((e) => { const k = e.reason || 'none'; rs[k] = (rs[k] || 0) + 1; });
+    L.push('');
+    L.push(`מחברת טעויות: ${errs.length} פתוחות · סיבות: ${Object.entries(rs).map(([k, v]) => `${REASON_HE[k] || 'לא סומנה'} ${v}`).join(', ')}`);
+  }
+  const days = Object.keys(state.daily || {}).sort();
+  const doneDays = days.filter((d) => d < today && Object.keys(state.daily[d]?.done || {}).length);
+  L.push(`ימי תרגול עם משימה שהושלמה: ${doneDays.length} · מילים בכרטיסיות: ${Object.keys(state.cards || {}).length}`);
+  return L.join('\n');
+}
